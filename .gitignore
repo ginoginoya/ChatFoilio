@@ -1,0 +1,29 @@
+# Backup
+Backup/
+[Bb]ackup/
+
+# Portfolio files
+portfolio_minimal_schedule.html
+portfolio_minimal_schedule/
+AI_ChatExtension_Design_Document.docx
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Extension build files
+*.zip
+*.crx
+*.pem
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock

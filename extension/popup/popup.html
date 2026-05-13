@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatFolio — AI Chat Enhancer</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+
+<div class="popup">
+  <!-- 標題列 -->
+  <header class="popup-header">
+    <div class="brand">
+      <img src="../icons/icon128.png" class="logo-img">
+      <div>
+        <div class="brand-name">ChatFolio</div>
+        <div class="brand-sub">AI Chat Enhancer</div>
+      </div>
+    </div>
+    <span class="version" id="version">v1.0.0</span>
+  </header>
+
+
+  <!-- 快速操作 -->
+  <section class="section">
+    <div class="section-title">快速操作</div>
+    <div class="quick-actions">
+      <button class="qa-btn" id="btn-prompt" title="開啟提示詞庫">
+        <span class="qa-icon"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px"><path d="M8 1L2 4l6 3 6-3-6-3z"/><path d="M2 4l6 3 6-3"/><path d="M2 7l6 3 6-3"/></svg></span>
+        <span>提示詞庫</span>
+      </button>
+      <button class="qa-btn" id="btn-export-md" title="匯出 Markdown (Ctrl+Shift+E)">
+        <span class="qa-icon">📄</span>
+        <span>匯出 MD</span>
+      </button>
+      <button class="qa-btn" id="btn-export-json" title="匯出 JSON">
+        <span class="qa-icon">💾</span>
+        <span>JSON</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 功能開關 -->
+  <section class="section">
+    <div class="section-title">功能開關</div>
+    <div class="toggles">
+      <label class="toggle-row">
+        <span class="toggle-label"><span class="toggle-emoji">📍</span> 啟用時間軸面板</span>
+        <input type="checkbox" id="toggle-timeline" class="toggle-input">
+        <span class="toggle-track"></span>
+      </label>
+      <label class="toggle-row">
+        <span class="toggle-label"><span class="toggle-emoji">📁</span> 啟用資料夾面板</span>
+        <input type="checkbox" id="toggle-folders" class="toggle-input">
+        <span class="toggle-track"></span>
+      </label>
+      <label class="toggle-row">
+        <span class="toggle-label"><span class="toggle-emoji">🗂</span> 啟用提示詞面板</span>
+        <input type="checkbox" id="toggle-prompts" class="toggle-input">
+        <span class="toggle-track"></span>
+      </label>
+      <label class="toggle-row">
+        <span class="toggle-label"><span class="toggle-emoji">📤</span> 啟用JSON和MD面板</span>
+        <input type="checkbox" id="toggle-export-panel" class="toggle-input">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </section>
+
+  <!-- 寬度 & 字體 快速調整 -->
+  <section class="section">
+    <div class="section-title">介面微調</div>
+    <div class="sliders">
+      <div class="slider-row">
+        <label>對話寬度 <span id="chat-width-val">800</span>px</label>
+        <input type="range" id="chat-width" min="400" max="1400" step="50" value="800">
+      </div>
+      <div class="slider-row">
+        <label>字體大小 <span id="font-size-val">14</span>px</label>
+        <input type="range" id="font-size" min="10" max="24" step="1" value="14">
+      </div>
+    </div>
+  </section>
+
+  <!-- 底部 -->
+  <footer class="popup-footer">
+    <div class="footer-actions">
+      <button class="footer-btn" id="btn-options">⚙ 完整設定</button>
+      <button class="theme-btn" id="btn-theme-dark" title="切換深色模式">🌙</button>
+      <button class="theme-btn" id="btn-theme-light" title="切換淺色模式">☀️</button>
+    </div>
+  </footer>
+</div>
+
+<script src="popup.js"></script>
+</body>
+</html>

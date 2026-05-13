@@ -1,0 +1,2009 @@
+/* ================================================================
+   ChatFolio — AI Chat Enhancer  |  Content Styles
+   ================================================================ */
+
+/* ── CSS 變數（淺色 / 深色主題） ───────────────────────────────── */
+:root {
+  --cf-bg: #ffffff;
+  --cf-bg2: #f9fafb;
+  --cf-text: #111827;
+  --cf-text2: #374151;
+  --cf-text3: #6b7280;
+  --cf-text4: #9ca3af;
+  --cf-border: #e5e7eb;
+  --cf-hover: #f3f4f6;
+  --cf-primary: #1A56DB;
+  --cf-primary2: #1e429f;
+  --cf-accent: #eff6ff;
+}
+
+.cf-dark {
+  --cf-bg: #1f2937;
+  --cf-bg2: #111827;
+  --cf-text: #f9fafb;
+  --cf-text2: #e5e7eb;
+  --cf-text3: #9ca3af;
+  --cf-text4: #6b7280;
+  --cf-border: #374151;
+  --cf-hover: #374151;
+  --cf-accent: #1e3a5f;
+}
+
+/* ── 時間軸面板 ─────────────────────────────────────────────── */
+#cf-timeline {
+  position: fixed;
+  right: 0;
+  top: 60px;
+  width: 220px;
+  height: calc(100vh - 60px);
+  background: var(--cf-bg);
+  border-left: 1px solid var(--cf-border);
+  box-shadow: -2px 0 12px rgba(0, 0, 0, .08);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  transition: width .2s ease;
+  font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  font-size: 13px;
+  color: var(--cf-text);
+}
+
+#cf-timeline.cftl-resizing {
+  transition: width 0s !important;
+}
+
+.cftl-resize-handle {
+  position: absolute;
+  top: 0;
+  left: -2px;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  z-index: 100;
+}
+
+.cftl-resize-handle:hover {
+  background: rgba(128, 128, 128, 0.1);
+}
+
+#cf-timeline.cftl-collapsed {
+  width: 40px !important;
+}
+
+#cf-timeline.cftl-collapsed .cftl-resize-handle {
+  display: none;
+}
+
+#cf-timeline.cftl-collapsed .cftl-header {
+  padding: 8px 8px;
+  justify-content: center;
+}
+
+#cf-timeline.cftl-collapsed .cftl-title,
+#cf-timeline.cftl-collapsed .cftl-scan-btn {
+  display: none;
+}
+
+#cf-timeline.cftl-collapsed .cftl-body {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Keep Gemini's native top-right action menu clickable above header/title layers. */
+.right-section,
+conversation-actions-icon,
+button[data-test-id="conversation-actions-menu-icon-button"] {
+  position: relative;
+  z-index: 2000 !important;
+}
+
+/* When Gemini fails to render the header title, the empty center area can still
+   sit above the top-right actions and eat clicks. Let clicks pass through only
+   for the truly empty state. */
+.top-bar-actions .center-section:empty {
+  pointer-events: none !important;
+}
+
+.cftl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--cf-border);
+  background: var(--cf-bg2);
+  flex-shrink: 0;
+}
+
+.cftl-title {
+  font-weight: 600;
+  color: var(--cf-text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.cftl-toggle {
+  background: none;
+  border: 1px solid var(--cf-border);
+  border-radius: 4px;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--cf-text3);
+  flex-shrink: 0;
+  transition: background .15s;
+}
+
+.cftl-toggle:hover {
+  background: var(--cf-hover);
+}
+
+/* ── Scan button ── */
+.cftl-scan-btn {
+  background: none;
+  border: 1px solid var(--cf-border);
+  border-radius: 4px;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--cf-text3);
+  flex-shrink: 0;
+  transition: background .15s, color .15s, border-color .15s;
+  margin-right: 4px;
+}
+
+.cftl-scan-btn:hover {
+  background: var(--cf-hover);
+  color: var(--cf-primary);
+  border-color: var(--cf-primary);
+}
+
+.cftl-scan-btn:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.cftl-scan-btn.cftl-scanning svg {
+  animation: cftl-spin .9s linear infinite;
+  transform-origin: center;
+}
+
+.cftl-scan-btn.cftl-scan-done {
+  color: var(--cf-primary);
+  border-color: var(--cf-primary);
+  background: var(--cf-accent);
+}
+
+@keyframes cftl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 收合時隱藏 scan 按鈕（已由上方 display:none 處理） */
+
+.cftl-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 8px;
+  transition: opacity .2s;
+}
+
+.cftl-body::-webkit-scrollbar {
+  width: 7px !important;
+  display: block !important;
+}
+
+.cftl-body::-webkit-scrollbar-track {
+  background: var(--cf-hover) !important;
+  border-radius: 4px;
+}
+
+.cftl-body::-webkit-scrollbar-thumb {
+  background: var(--cf-text4) !important;
+  border-radius: 4px;
+  border: 1px solid var(--cf-hover);
+}
+
+.cftl-body::-webkit-scrollbar-thumb:hover {
+  background: var(--cf-text3) !important;
+}
+
+/* ── Timeline list with vertical connecting line ── */
+.cftl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.cftl-list::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 18px;
+  bottom: 18px;
+  width: 2px;
+  background: var(--cf-border);
+  border-radius: 1px;
+}
+
+/* ── Node ── */
+.cftl-node {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px 6px 8px;
+  cursor: pointer;
+  transition: background .1s;
+  position: relative;
+}
+
+.cftl-node:hover {
+  background: var(--cf-hover);
+}
+
+.cftl-node.cftl-active {
+  background: var(--cf-accent);
+  border-left: 2px solid var(--cf-primary);
+}
+
+/* ── Dot ── */
+.cftl-dot-wrap {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.cftl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transition: transform .15s;
+}
+
+.cftl-node:hover .cftl-dot {
+  transform: scale(1.2);
+}
+
+.cftl-user .cftl-dot {
+  background: var(--cf-primary);
+  box-shadow: 0 0 0 3px var(--cf-bg);
+}
+
+.cftl-node:hover .cftl-user .cftl-dot {
+  box-shadow: 0 0 0 3px var(--cf-hover);
+}
+
+.cftl-node.cftl-active .cftl-user .cftl-dot {
+  box-shadow: 0 0 0 3px var(--cf-accent);
+}
+
+.cftl-model .cftl-dot {
+  background: var(--cf-bg);
+  border: 2px solid var(--cf-text3);
+  box-shadow: 0 0 0 2px var(--cf-bg);
+}
+
+.cftl-node:hover .cftl-model .cftl-dot {
+  box-shadow: 0 0 0 2px var(--cf-hover);
+}
+
+.cftl-node.cftl-active .cftl-model .cftl-dot {
+  box-shadow: 0 0 0 2px var(--cf-accent);
+}
+
+.cftl-starred .cftl-dot {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, .35) !important;
+}
+
+/* ── Content ── */
+.cftl-content {
+  flex: 1;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.cftl-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+
+.cftl-role {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cf-text2);
+  white-space: nowrap;
+  line-height: 1.3;
+}
+
+.cftl-user .cftl-role {
+  color: var(--cf-primary);
+}
+
+
+.cftl-preview {
+  font-size: 11px;
+  color: var(--cf-text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.4;
+  transition: max-height .2s ease;
+}
+
+.cftl-node:hover .cftl-preview {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: unset;
+}
+
+/* ── Star ── */
+.cftl-star {
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  color: var(--cf-border);
+  margin-top: 4px;
+  opacity: 0;
+  transition: opacity .15s, color .15s;
+}
+
+.cftl-node:hover .cftl-star {
+  opacity: 1;
+  color: var(--cf-text4);
+}
+
+.cftl-starred .cftl-star {
+  opacity: 1;
+  color: #f59e0b !important;
+}
+
+/* Collapsed: hide content, center dots */
+#cf-timeline.cftl-collapsed .cftl-content,
+#cf-timeline.cftl-collapsed .cftl-star {
+  display: none;
+}
+
+#cf-timeline.cftl-collapsed .cftl-node {
+  justify-content: center;
+  padding: 5px 0;
+}
+
+#cf-timeline.cftl-collapsed .cftl-list::before {
+  left: 18px;
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   資料夾面板 — 嵌入側邊欄版本 (cffld-embedded) + fixed 備援
+   ══════════════════════════════════════════════════════════════ */
+
+/* fixed 備援（注入失敗時） */
+#cf-folders:not(.cffld-embedded) {
+  position: fixed;
+  left: 0;
+  bottom: 80px;
+  width: 240px;
+  max-height: 50vh;
+  border: 1px solid var(--cf-border);
+  border-radius: 0 8px 8px 0;
+  box-shadow: 2px 2px 12px rgba(0, 0, 0, .1);
+  z-index: 8900;
+  overflow: hidden;
+}
+
+/* 嵌入側邊欄（正常狀態） */
+#cf-folders.cffld-embedded {
+  position: relative;
+  width: 100%;
+  border-top: 1px solid var(--cf-border);
+  border-bottom: 1px solid var(--cf-border);
+  z-index: auto;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* 浮動面板模式 */
+#cf-folders.cf-folders-floating {
+  position: fixed !important;
+  z-index: 10000 !important;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, .3) !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--cf-border) !important;
+
+  /* 自由縮放屬性 */
+  resize: both !important;
+  overflow: hidden !important;
+  min-width: 200px !important;
+  max-width: 80vw !important;
+  min-height: 200px !important;
+  max-height: 85vh !important;
+}
+
+#cf-folders.cf-folders-floating .cffld-header {
+  cursor: grab;
+}
+
+#cf-folders.cf-folders-floating .cffld-header:active {
+  cursor: grabbing;
+}
+
+/* 自訂邊緣縮放把手 (只在浮動時顯示) */
+.cffld-resize-r, .cffld-resize-b, .cffld-resize-l, .cffld-resize-t {
+  display: none;
+  position: absolute;
+  z-index: 50;
+}
+#cf-folders.cf-folders-floating .cffld-resize-r,
+#cf-folders.cf-folders-floating .cffld-resize-b,
+#cf-folders.cf-folders-floating .cffld-resize-l,
+#cf-folders.cf-folders-floating .cffld-resize-t {
+  display: block;
+}
+.cffld-resize-r { top: 0; right: 0; width: 6px; height: 100%; cursor: ew-resize; }
+.cffld-resize-b { bottom: 0; left: 0; width: 100%; height: 6px; cursor: ns-resize; }
+.cffld-resize-l { top: 0; left: 0; width: 6px; height: 100%; cursor: ew-resize; }
+.cffld-resize-t { top: 0; left: 0; width: 100%; height: 6px; cursor: ns-resize; }
+
+/* 浮動模式下，取消原本的最大高度動畫，改為自動填滿剩餘高度並產生卷軸 */
+#cf-folders.cf-folders-floating .cffld-list {
+  max-height: none !important;
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+
+#cf-folders {
+  background: var(--cf-bg);
+  color: var(--cf-text);
+  display: flex;
+  flex-direction: column;
+  font-family: 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  font-size: 13px;
+}
+
+/* ── 標頭 ─────────────────────────────────────────────────── */
+.cffld-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 6px 6px;
+  background: var(--cf-bg2);
+  border-bottom: 1px solid var(--cf-border);
+  flex-shrink: 0;
+  gap: 4px;
+}
+
+.cffld-header-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+/* 搜尋列 (獨立一行) */
+.cffld-search-bar {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding: 6px 8px;
+  background: var(--cf-bg2);
+  border-bottom: 1px solid var(--cf-border);
+  flex-shrink: 0;
+}
+.cffld-search-bar[hidden] {
+  display: none !important;
+}
+.cffld-search-input {
+  width: 100%;
+  background: var(--cf-bg);
+  border: 1px solid var(--cf-border);
+  color: var(--cf-text);
+  border-radius: 4px;
+  padding: 4px 24px 4px 8px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+}
+.cffld-search-input:focus {
+  border-color: var(--cf-primary);
+}
+.cffld-search-clear {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--cf-text3);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 4px;
+}
+.cffld-search-clear:hover {
+  color: var(--cf-text);
+}
+
+.cffld-folder-icon {
+  display: flex;
+  align-items: center;
+  color: #f5a623;
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+}
+
+.cffld-folder-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cffld-title {
+  font-weight: 600;
+  color: var(--cf-text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* 摺疊按鈕（左側，與樹狀箭頭相同風格） */
+.cffld-collapse-btn,
+.cffld-pin-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cf-text3);
+  padding: 0;
+  transition: background .12s, color .12s, transform .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.cffld-collapse-btn svg,
+.cffld-pin-btn svg {
+  width: 14px;
+  height: 14px;
+  transition: transform .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.cffld-collapse-btn:hover,
+.cffld-pin-btn:hover {
+  background: var(--cf-hover);
+  color: var(--cf-text);
+}
+
+/* 浮動模式時，大頭針高亮且稍微傾斜，並隱藏不必要的摺疊按鈕 */
+#cf-folders.cf-folders-floating .cffld-pin-btn {
+  color: var(--cf-primary);
+  transform: rotate(45deg);
+}
+
+#cf-folders.cf-folders-floating .cffld-collapse-btn {
+  display: none;
+}
+
+/* 摺疊狀態：箭頭轉 -90° 指向右側 */
+#cf-folders.cffld-panel-collapsed .cffld-collapse-btn svg {
+  transform: rotate(-90deg);
+}
+
+/* 摺疊時隱藏列表，並動態縮小高度 */
+#cf-folders .cffld-list {
+  transition: max-height .22s cubic-bezier(.4, 0, .2, 1), opacity .18s;
+  max-height: 600px;
+  opacity: 1;
+}
+
+#cf-folders.cffld-panel-collapsed .cffld-list {
+  max-height: 0 !important;
+  opacity: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+#cf-folders.cffld-panel-collapsed .cffld-header {
+  border-bottom: none;
+}
+
+/* 標頭按鈕群組 */
+.cffld-header-btns {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.cffld-hbtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cf-text3);
+  transition: background .12s, color .12s;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.cffld-hbtn:hover {
+  background: var(--cf-hover);
+  color: var(--cf-text);
+}
+
+/* 新增資料夾按鈕 */
+.cffld-add {
+  background: var(--cf-primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s;
+  flex-shrink: 0;
+}
+
+.cffld-add svg {
+  width: 12px;
+  height: 12px;
+}
+
+.cffld-add:hover {
+  background: var(--cf-primary2);
+}
+
+/* 本機匯入匯出下拉
+   使用 position:fixed + JS 動態座標，避免被 overflow:hidden 裁切 */
+.cffld-io-wrap,
+.cffld-sync-wrap {
+  position: static;
+}
+
+.cffld-io-menu,
+.cffld-sync-menu {
+  position: fixed;
+  /* 脫離 overflow:hidden 裁切範圍 */
+  background: var(--cf-bg);
+  border: 1px solid var(--cf-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .22);
+  z-index: 99999;
+  min-width: 130px;
+  padding: 4px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cffld-io-menu:not([hidden]),
+.cffld-sync-menu:not([hidden]) {
+  display: flex;
+}
+
+.cffld-io-menu button,
+.cffld-sync-menu button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--cf-text2);
+  white-space: nowrap;
+  transition: background .1s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cffld-io-menu button:hover,
+.cffld-sync-menu button:hover {
+  background: var(--cf-hover);
+  color: var(--cf-text);
+}
+
+/* ── 資料夾列表本體 ───────────────────────────────────────── */
+.cffld-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+
+.cffld-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.cffld-list::-webkit-scrollbar {
+  width: 7px;
+}
+
+.cffld-list::-webkit-scrollbar-thumb {
+  background: var(--cf-text4);
+  border-radius: 4px;
+}
+
+.cffld-list::-webkit-scrollbar-thumb:hover {
+  background: var(--cf-text3);
+}
+
+/* ── 資料夾底部與空狀態 ─────────────────────────────────────── */
+.cffld-list-footer {
+  padding: 4px 6px;
+  border-top: 1px solid var(--cf-border);
+  background: var(--cf-bg2);
+  flex-shrink: 0;
+}
+
+.cffld-new-folder-btn {
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--cf-border);
+  cursor: pointer;
+  padding: 4px 0;
+  border-radius: 6px;
+  color: var(--cf-text3);
+  font-size: 12px;
+  transition: all .15s;
+}
+
+.cffld-new-folder-btn:hover {
+  background: var(--cf-hover);
+  color: var(--cf-text);
+  border-color: var(--cf-text3);
+}
+
+.cffld-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 10px;
+  padding: 24px 10px;
+  border: 2px dashed var(--cf-border);
+  border-radius: 8px;
+  color: var(--cf-text3);
+  font-size: 12px;
+  text-align: center;
+  transition: background .15s, border-color .15s;
+}
+
+.cffld-empty-state.cffld-drag-over {
+  background: rgba(26, 86, 219, 0.1);
+  border-color: var(--cf-primary);
+  color: var(--cf-primary);
+}
+
+/* ── 資料夾列（樹枝狀） ─────────────────────────────────────── */
+.cffld-item {
+  position: relative;
+}
+
+.cffld-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  margin: 1px 4px;
+  transition: all .15s;
+  min-height: 22px;
+  background: transparent;
+  color: var(--cf-text);
+  position: relative;
+}
+
+.cffld-row[draggable="true"] {
+  cursor: grab;
+}
+.cffld-row[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.cffld-row:hover {
+  background: var(--cf-bg2);
+}
+
+.cffld-row.cffld-drag-over {
+  background: rgba(26, 86, 219, 0.15) !important;
+  box-shadow: inset 0 0 0 1px var(--cf-primary);
+}
+
+.cffld-row.cffld-drag-above::before,
+.cffld-conv-item.cffld-drag-above::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  background: var(--cf-primary);
+  z-index: 20;
+  border-radius: 1px;
+}
+
+.cffld-row.cffld-drag-below::after,
+.cffld-conv-item.cffld-drag-below::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 4px;
+  right: 4px;
+  height: 3px;
+  background: var(--cf-primary);
+  z-index: 20;
+  border-radius: 1px;
+}
+
+.cffld-row:hover .cffld-actions {
+  opacity: 1;
+}
+
+/* 樹狀 Chevron 展開按鈕（與摺疊按鈕統一風格） */
+.cffld-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cf-text3);
+  padding: 0;
+  transition: color .1s;
+  user-select: none;
+}
+
+.cffld-toggle svg {
+  width: 13px;
+  height: 13px;
+  transition: transform .18s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* 展開狀態：chevron 旋轉 90° 朝下 */
+.cffld-toggle[data-expanded="true"] svg {
+  transform: rotate(90deg);
+}
+
+.cffld-toggle:hover {
+  color: var(--cf-text);
+}
+
+.cffld-toggle-empty {
+  cursor: default;
+}
+
+.cffld-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cffld-name {
+  flex: 1;
+  color: var(--cf-text);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  padding: 1px 2px;
+  border-radius: 2px;
+}
+.cffld-name:hover {
+  background: var(--cf-hover);
+  text-decoration: underline;
+}
+
+/* 原位編輯輸入框（優化對比度，確保框選文字可見） */
+.cffld-inline-input {
+  flex: 1;
+  width: 100%;
+  border: 1px solid var(--cf-primary);
+  background: var(--cf-hover);
+  color: var(--cf-text);
+  font-size: 14px;
+  padding: 0 4px;
+  margin: -1px 0;
+  outline: none;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--cf-primary);
+}
+
+.cffld-count {
+  font-size: 10px;
+  color: var(--cf-text3);
+  flex-shrink: 0;
+  background: var(--cf-hover);
+  padding: 1px 5px;
+  border-radius: 99px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cffld-actions {
+  display: flex;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+
+.cffld-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 4px;
+  color: var(--cf-text3);
+  font-size: 11px;
+  transition: background .1s, color .1s;
+}
+
+.cffld-btn:hover {
+  background: var(--cf-border);
+  color: var(--cf-text);
+}
+
+
+/* ── 資料夾中的對話列表 ─────────────────────────────────────── */
+.cffld-conv-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  margin: 1px 4px;
+  border-radius: 5px;
+  color: var(--cf-text2);
+  font-size: 13px;
+  cursor: pointer;
+  background: transparent;
+  transition: all .15s;
+  position: relative;
+}
+
+.cffld-conv-item[draggable="true"] {
+  cursor: grab;
+}
+.cffld-conv-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.cffld-conv-item:hover {
+  background: var(--cf-bg2);
+  color: var(--cf-text);
+}
+
+.cffld-conv-item:hover .cffld-conv-remove {
+  opacity: 1;
+}
+
+.cffld-conv-icon {
+  font-size: 10px;
+  flex-shrink: 0;
+  opacity: .5;
+}
+
+.cffld-conv-name {
+  flex: 1;
+  font-size: 13px;
+  color: var(--cf-text2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.cffld-conv-name:hover {
+  color: var(--cf-primary);
+}
+
+.cffld-conv-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cf-text4);
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity .1s, background .1s;
+}
+
+.cffld-conv-remove:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* ── 資料夾選擇器 Overlay ────────────────────────────────────── */
+.cffld-selector-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .5);
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cffld-sel-modal {
+  background: var(--cf-bg);
+  border-radius: 12px;
+  width: min(360px, 90vw);
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+  overflow: hidden;
+  color: var(--cf-text);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.cffld-sel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--cf-border);
+  font-weight: 600;
+  font-size: 14px;
+  background: var(--cf-bg2);
+}
+
+.cffld-sel-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--cf-text3);
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background .15s;
+}
+
+.cffld-sel-close:hover {
+  background: var(--cf-hover);
+}
+
+.cffld-sel-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0;
+}
+
+.cffld-sel-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--cf-text2);
+  transition: background .1s;
+}
+
+.cffld-sel-item:hover {
+  background: var(--cf-hover);
+}
+
+.cffld-sel-item.cffld-sel-active {
+  background: var(--cf-accent);
+  color: var(--cf-primary);
+}
+
+.cffld-sel-check {
+  margin-left: auto;
+  font-size: 14px;
+  color: var(--cf-primary);
+}
+
+.cffld-sel-empty {
+  text-align: center;
+  color: var(--cf-text4);
+  padding: 24px 16px;
+  font-size: 13px;
+}
+
+.cffld-sel-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--cf-border);
+}
+
+.cffld-sel-new {
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--cf-text4);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 13px;
+  color: var(--cf-text3);
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.cffld-sel-new:hover {
+  border-color: var(--cf-primary);
+  color: var(--cf-primary);
+  background: var(--cf-accent);
+}
+
+/* ── 對話選單注入項 ─────────────────────────────────────────── */
+.cf-conv-menu-item {
+  display: flex !important;
+  align-items: center !important;
+  padding: 8px 16px !important;
+  cursor: pointer !important;
+  font-size: 14px !important;
+  transition: background .1s !important;
+  color: inherit !important;
+}
+
+/* ── 提示詞庫 Trigger ────────────────────────────────────────── */
+#cf-prompt-trigger {
+  background: var(--cf-bg);
+  border: 1.5px solid var(--cf-border);
+  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  color: var(--cf-text2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .1);
+  transition: background .15s, border-color .15s, color .15s, transform .15s;
+  position: fixed;
+  bottom: 120px;
+  right: 230px;
+  z-index: 11000 !important;
+}
+
+#cf-prompt-trigger svg {
+  width: 15px;
+  height: 15px;
+}
+
+#cf-prompt-trigger:hover {
+  background: var(--cf-accent);
+  border-color: var(--cf-primary);
+  color: var(--cf-primary);
+  transform: scale(1.06);
+}
+
+/* ── 提示詞庫 Overlay ────────────────────────────────────────── */
+#cf-prompt-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .45);
+  backdrop-filter: blur(6px);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+}
+
+#cf-prompt-overlay.cfpm-open {
+  display: flex;
+  animation: cfpm-bg-in .18s ease;
+}
+
+@keyframes cfpm-bg-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes cfpm-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Modal shell */
+.cfpm-modal {
+  background: var(--cf-bg);
+  border-radius: 16px;
+  width: min(680px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 28px 72px rgba(0, 0, 0, .28);
+  border: 1px solid var(--cf-border);
+  overflow: hidden;
+  animation: cfpm-up .22s cubic-bezier(.22, .68, 0, 1.2);
+}
+
+/* Main screen */
+.cfpm-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* Header */
+.cfpm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px 15px;
+  border-bottom: 1px solid var(--cf-border);
+  flex-shrink: 0;
+}
+
+.cfpm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cfpm-header-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--cf-accent);
+  color: var(--cf-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cfpm-header-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.cfpm-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cf-text);
+}
+
+.cfpm-count-badge {
+  background: var(--cf-hover);
+  color: var(--cf-text3);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.cfpm-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cfpm-btn-new {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--cf-primary);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+
+.cfpm-btn-new:hover {
+  background: var(--cf-primary2);
+  transform: translateY(-1px);
+}
+
+.cfpm-btn-new svg {
+  width: 13px;
+  height: 13px;
+}
+
+.cfpm-close {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cf-text3);
+  transition: background .15s, color .15s;
+}
+
+.cfpm-close svg {
+  width: 13px;
+  height: 13px;
+}
+
+.cfpm-close:hover {
+  background: var(--cf-hover);
+  color: var(--cf-text);
+}
+
+/* Search bar */
+.cfpm-search-bar {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--cf-border);
+  flex-shrink: 0;
+}
+
+.cfpm-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cfpm-search-icon {
+  position: absolute;
+  left: 11px;
+  color: var(--cf-text4);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+.cfpm-search-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cfpm-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1.5px solid var(--cf-border);
+  border-radius: 10px;
+  padding: 9px 12px 9px 34px;
+  font-size: 13.5px;
+  outline: none;
+  background: var(--cf-bg2);
+  color: var(--cf-text);
+  transition: border-color .15s, background .15s;
+}
+
+.cfpm-search:focus {
+  border-color: var(--cf-primary);
+  background: var(--cf-bg);
+}
+
+/* List */
+.cfpm-list {
+  list-style: none;
+  margin: 0;
+  padding: 12px 14px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.cfpm-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cfpm-list::-webkit-scrollbar-thumb {
+  background: var(--cf-border);
+  border-radius: 99px;
+}
+
+/* Empty state */
+.cfpm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--cf-text4);
+  padding: 52px 0;
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.cfpm-empty svg {
+  width: 44px;
+  height: 44px;
+  opacity: .3;
+}
+
+/* Item card */
+.cfpm-item {
+  border: 1.5px solid var(--cf-border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  cursor: default;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+
+.cfpm-item:hover {
+  border-color: var(--cf-primary);
+  box-shadow: 0 2px 10px rgba(26, 86, 219, .09);
+  background: var(--cf-accent);
+}
+
+.cfpm-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.cfpm-item-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--cf-text);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cfpm-item-preview {
+  font-size: 12.5px;
+  color: var(--cf-text3);
+  line-height: 1.55;
+  margin-bottom: 7px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cfpm-item-footer {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.cfpm-tag {
+  background: var(--cf-hover);
+  color: var(--cf-text3);
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  border: 1px solid var(--cf-border);
+}
+
+.cfpm-usage {
+  font-size: 11px;
+  color: var(--cf-text4);
+  margin-left: auto;
+}
+
+/* Item actions — always visible, vertically stacked */
+.cfpm-item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.cfpm-btn-use {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--cf-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+
+.cfpm-btn-use:hover {
+  background: var(--cf-primary2);
+}
+
+.cfpm-btn-use svg {
+  width: 12px;
+  height: 12px;
+}
+
+.cfpm-btn-edit,
+.cfpm-btn-del {
+  width: 30px;
+  height: 28px;
+  border-radius: 7px;
+  background: none;
+  border: 1.5px solid var(--cf-border);
+  cursor: pointer;
+  color: var(--cf-text3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .15s, border-color .15s, color .15s;
+}
+
+.cfpm-btn-edit svg,
+.cfpm-btn-del svg {
+  width: 12px;
+  height: 12px;
+}
+
+.cfpm-btn-edit:hover {
+  background: var(--cf-hover);
+  border-color: var(--cf-text3);
+  color: var(--cf-text);
+}
+
+.cfpm-btn-del:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+/* Edit panel — fixed size, centred in viewport (independent of modal height) */
+.cfpm-edit-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(680px, 92vw);
+  height: min(600px, 88vh);
+  background: var(--cf-bg);
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  border: 1px solid var(--cf-border);
+  box-shadow: 0 28px 72px rgba(0, 0, 0, .32);
+  overflow: hidden;
+  animation: cfpm-up .2s cubic-bezier(.22, .68, 0, 1.1);
+  z-index: 10001;
+}
+
+.cfpm-edit-panel.cfpm-edit-hidden {
+  display: none;
+}
+
+.cfpm-edit-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--cf-border);
+  flex-shrink: 0;
+}
+
+.cfpm-edit-title-bar {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cf-text);
+}
+
+.cfpm-edit-header-btns {
+  display: flex;
+  gap: 8px;
+}
+
+.cfpm-edit-cancel {
+  background: none;
+  border: 1.5px solid var(--cf-border);
+  border-radius: 9px;
+  padding: 7px 16px;
+  font-size: 13px;
+  color: var(--cf-text2);
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.cfpm-edit-cancel:hover {
+  background: var(--cf-hover);
+}
+
+.cfpm-edit-save {
+  background: var(--cf-primary);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .15s, transform .1s;
+}
+
+.cfpm-edit-save:hover {
+  background: var(--cf-primary2);
+  transform: translateY(-1px);
+}
+
+.cfpm-edit-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.cfpm-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.cfpm-field label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--cf-text2);
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cfpm-field-hint {
+  font-weight: 400;
+  color: var(--cf-text4);
+}
+
+.cfpm-field input,
+.cfpm-field textarea {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1.5px solid var(--cf-border);
+  border-radius: 9px;
+  padding: 9px 12px;
+  font-size: 13.5px;
+  outline: none;
+  background: var(--cf-bg2);
+  color: var(--cf-text);
+  font-family: inherit;
+  transition: border-color .15s, background .15s;
+  resize: vertical;
+}
+
+.cfpm-field input:focus,
+.cfpm-field textarea:focus {
+  border-color: var(--cf-primary);
+  background: var(--cf-bg);
+}
+
+.cfpm-field textarea {
+  min-height: 160px;
+  line-height: 1.65;
+}
+
+/* ── 匯出工具列 ─────────────────────────────────────────────── */
+#cf-export-bar {
+  position: fixed;
+  bottom: 16px;
+  right: 230px;
+  display: flex;
+  gap: 6px;
+  z-index: 11000 !important;
+}
+
+.vex-btn {
+  background: var(--cf-bg);
+  border: 1px solid var(--cf-border);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cf-text2);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .1);
+  transition: background .15s, border-color .15s;
+}
+
+.vex-btn:hover {
+  background: var(--cf-bg2);
+  border-color: var(--cf-primary);
+  color: var(--cf-primary);
+}
+
+/* ── 引用回覆提示 ───────────────────────────────────────────── */
+#cf-quote-tooltip {
+  position: absolute;
+  background: #111827;
+  color: white;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  z-index: 10001;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .3);
+}
+
+#cf-quote-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #111827;
+}
+
+
+/* ── 公式複製提示 ───────────────────────────────────────────── */
+.cf-copy-tip {
+  position: absolute;
+  background: #0E9F6E;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  pointer-events: none;
+  animation: fadeOut 1.5s forwards;
+}
+
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  70% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* ── 拖曳中狀態 ─────────────────────────────────────────────── */
+.cf-dragging {
+  opacity: 0.8 !important;
+  z-index: 2147483647 !important;
+  transition: none !important;
+}
+
+/* ── Toast 通知系統 ─────────────────────────────────────────── */
+#cf-toast-container {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.vtoast {
+  background: rgba(35, 42, 58, 0.92);
+  backdrop-filter: blur(10px);
+  color: #e8edf7;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1.2;
+  font-weight: 500;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  animation: vtoast-in 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28) forwards;
+  pointer-events: auto;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vtoast-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7ab7ff;
+  box-shadow: 0 0 0 0 rgba(122, 183, 255, 0.7);
+  animation: vtoast-pulse 1.2s ease-out infinite;
+  flex: 0 0 auto;
+}
+
+@keyframes vtoast-pulse {
+  0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(122, 183, 255, 0.65); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(122, 183, 255, 0); }
+  100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(122, 183, 255, 0); }
+}
+
+.vtoast-out {
+  animation: vtoast-out 0.3s ease-in forwards;
+}
+
+@keyframes vtoast-in {
+  from { opacity: 0; transform: translateY(-20px) scale(0.9); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes vtoast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-10px) scale(0.95); }
+}
+
+/* ── Native Sidebar Section Collapse ── */
+.cf-nat-collapse-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cf-text3);
+  padding: 0;
+  margin-right: -2px;
+  margin-left: -10px;
+  border-radius: 4px;
+  transition: background .12s, color .12s, transform .2s cubic-bezier(.4, 0, .2, 1);
+  flex: 0 0 32px;
+  z-index: 5;
+  box-sizing: border-box;
+}
+
+.cf-nat-collapse-btn:hover {
+  background: var(--cf-hover);
+  color: var(--cf-text);
+}
+
+.cf-nat-collapse-btn svg {
+  width: 14px;
+  height: 14px;
+  transition: transform .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.cf-nat-collapsed .cf-nat-collapse-btn svg {
+  transform: rotate(-90deg);
+}
+
+/* 
+   改進的收合邏輯：
+   使用 max-height/opacity 組合而非 display:none，減少框架重繪異常。
+*/
+.cf-nat-collapsed > *:not([data-cf-header]):not(#cf-folders):not([data-cf-ignore]) {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+/* Ensure the header container itself is visible */
+[data-cf-header] {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* ── Header Breadcrumb ── */
+#cf-header-breadcrumb {
+  position: fixed !important;
+  left: 50% !important;
+  top: 32px !important; /* 精確對準 Gemini Header 中線 */
+  transform: translate(-50%, -50%) !important;
+  z-index: 5000 !important;
+  pointer-events: none;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 0; 
+  font-family: 'Google Sans', 'Inter', 'Noto Sans TC', system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--cf-text);
+  white-space: nowrap;
+  max-width: 75vw;
+  min-width: 0;
+  padding: 4px 20px;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+#cf-header-breadcrumb.cf-active {
+  background: var(--cf-bg);
+  box-shadow: 0 0 15px 10px var(--cf-bg);
+}
+
+.cf-breadcrumb-folders {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  min-width: 0;
+  opacity: 0.6; /* 讓路徑較淡，突顯標題 */
+}
+
+#cf-header-breadcrumb .cf-breadcrumb-folder {
+  color: var(--cf-text2);
+  font-weight: 400; /* 路徑使用較細字重 */
+}
+
+#cf-header-breadcrumb .cf-breadcrumb-sep {
+  color: var(--cf-text3);
+  margin: 0 10px; /* 拉大間距，更有空間感 */
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
+#cf-header-breadcrumb .cf-breadcrumb-title {
+  color: var(--cf-text);
+  font-weight: 700; /* 標題加粗，與原生一致 */
+  flex-shrink: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* 深色模式修正 - 使用 Gemini 原生背景色 */
+.cf-dark #cf-header-breadcrumb.cf-active {
+  background: #131314 !important; 
+  box-shadow: 0 0 15px 10px #131314 !important;
+}
+.cf-dark #cf-header-breadcrumb .cf-breadcrumb-title {
+  color: #ffffff;
+}
+.cf-dark #cf-header-breadcrumb .cf-breadcrumb-folder {
+  color: #c4c7c5;
+}
+
+/* 只隱藏原生的標題文字元素，保留其他互動元件 */
+.center-section.cf-has-breadcrumb h1,
+.center-section.cf-has-breadcrumb .conversation-title,
+.center-section.cf-has-breadcrumb span:not([class*="cf-"]) {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

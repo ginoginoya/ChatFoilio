@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pandoc --track-changes=all \"AI_ChatExtension_Design_Document.docx\" -o design_doc.md)",
+      "Read(//c/Users/user/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/81473eed-0ba1-43d6-9cd9-49aa89b59f2b/c64944d3-012a-4a7b-8be3-c4f69bef8f00/skills/docx/**)",
+      "Bash(python scripts/office/unpack.py \"D:/user/Desktop/AI/Claude/Voyger/AI_ChatExtension_Design_Document.docx\" \"D:/user/Desktop/AI/Claude/Voyger/unpacked_doc/\")",
+      "Bash(pip install:*)",
+      "Bash(python -c \":*)",
+      "Bash(py -3:*)",
+      "Bash(curl -sL \"https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js\" -o /d/user/Desktop/AI/Claude/Voyger/extension/libs/mermaid.min.js)",
+      "Bash(grep -v \"//.*upload\\\\|//.*download\")",
+      "Bash(grep -v \"^.*//.*mermaid\")",
+      "Bash(powershell -Command \"Get-Content 'C:\\\\Users\\\\user\\\\.claude\\\\projects\\\\D--user-Desktop-AI-Claude-Voyger\\\\614a8b90-374b-46f1-89e5-27b66ab1f515.jsonl' | Select-Object -Last 100\")",
+      "Bash(node --check \"D:\\\\user\\\\Desktop\\\\AI\\\\Claude\\\\Voyger\\\\extension\\\\content\\\\content.js\")",
+      "Bash(node -e ':*)"
+    ]
+  }
+}

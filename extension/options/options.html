@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ChatFolio 設定</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+
+<div class="layout">
+  <!-- 側邊導覽 -->
+  <nav class="sidebar">
+    <div class="nav-brand">
+      <img src="../icons/icon128.png" class="nav-logo-img">
+      <div>
+        <div class="nav-title">ChatFolio</div>
+        <div class="nav-sub">AI Chat Enhancer</div>
+      </div>
+    </div>
+    <ul class="nav-list">
+      <li><a href="#general"    class="nav-link active" data-tab="general">⚙ 一般設定</a></li>
+      <li><a href="#timeline"   class="nav-link" data-tab="timeline">📍 時間軸</a></li>
+      <li><a href="#folders"    class="nav-link" data-tab="folders">📁 資料夾</a></li>
+      <li><a href="#prompts"    class="nav-link" data-tab="prompts"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;vertical-align:-2px;margin-right:3px"><path d="M8 1L2 4l6 3 6-3-6-3z"/><path d="M2 8l6 3 6-3"/><path d="M2 11.5l6 3 6-3"/></svg>提示詞庫</a></li>
+      <li><a href="#export"     class="nav-link" data-tab="export">📤 匯出設定</a></li>
+      <li><a href="#advanced"   class="nav-link" data-tab="advanced">🔧 進階</a></li>
+      <li><a href="#about"      class="nav-link" data-tab="about">ℹ 關於</a></li>
+    </ul>
+    <div class="nav-save">
+      <button id="btn-save" class="btn-primary">儲存設定</button>
+      <button id="btn-reset" class="btn-ghost">重設預設值</button>
+    </div>
+  </nav>
+
+  <!-- 主要內容 -->
+  <main class="content">
+    <div id="toast" class="toast" hidden>✓ 設定已儲存</div>
+
+    <!-- ── 一般設定 ── -->
+    <section id="tab-general" class="tab active">
+      <h2>⚙ 一般設定</h2>
+      <p class="desc">調整對話介面外觀與基本行為。</p>
+
+      <div class="card">
+        <h3>介面寬度與字體</h3>
+        <div class="field">
+          <label>對話視窗寬度
+            <span class="hint">400px – 1400px</span>
+          </label>
+          <div class="range-row">
+            <input type="range" id="chatWidth" min="400" max="1400" step="50">
+            <span class="range-val" id="chatWidth-val">800</span>
+            <span class="unit">px</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>字體大小
+            <span class="hint">10px – 24px</span>
+          </label>
+          <div class="range-row">
+            <input type="range" id="fontSize" min="10" max="24" step="1">
+            <span class="range-val" id="fontSize-val">14</span>
+            <span class="unit">px</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>側邊欄 Gem 顯示數量
+            <span class="hint">2 – 10 (預設 10)</span>
+          </label>
+          <div class="range-row">
+            <input type="range" id="gemMaxItems" min="2" max="10" step="1">
+            <span class="range-val" id="gemMaxItems-val">10</span>
+            <span class="unit">個</span>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="card">
+        <h3>對話自動同步</h3>
+        <div class="field toggle-field">
+          <div>
+            <label>同步刪除動作</label>
+            <p class="hint-text">當原有的對話視窗被刪除時，連帶從所有資料夾中移除該對話連結。</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="syncDeleteEnabled"><span class="track"></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>標題修復</h3>
+        <div class="field">
+          <label>歷史標題最大讀取次數
+            <span class="hint">0 到 100，0 代表無限制 (預設 3)</span>
+          </label>
+          <input type="number" id="titleRepairMaxRetries" min="0" max="100" step="1" placeholder="3">
+          <p class="hint-text">當目前對話還拿不到標題時，從歷史對話重讀標題的最多嘗試次數。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 時間軸 ── -->
+    <section id="tab-timeline" class="tab">
+      <h2>📍 時間軸設定</h2>
+      <p class="desc">設定右側時間軸面板的顯示方式。</p>
+
+      <div class="card">
+        <h3>功能控制</h3>
+        <div class="field toggle-field">
+          <div>
+            <label>啟用時間軸面板</label>
+            <p class="hint-text">在頁面右側顯示對話節點導覽列</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="timelineEnabled"><span class="track"></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>讀取全部對話功能 <span class="hint">測試性功能</span></h3>
+        <div class="field toggle-field">
+          <div>
+            <label>啟用讀取全部對話功能 (測試性)</label>
+            <p class="hint-text">在時間軸頂部顯示「讀取全部對話」按鈕。啟用此功能將改用重複置頂方式讀取歷史紀錄。</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="timelineScanEnabled"><span class="track"></span></label>
+        </div>
+        <div class="field">
+          <label>對話視窗往上拉到頂的次數 <span class="hint">0 到 100，0 代表無限制 (預設 3)</span></label>
+          <input type="number" id="timelineScanRepeats" min="0" max="100" step="1" placeholder="3">
+          <p class="hint-text">重複將視窗捲動至頂部以觸發 Gemini 載入對話的次數。</p>
+        </div>
+        <div class="field">
+          <label>置頂重試間隔 <span class="hint">毫秒 (ms)，500 - 10000 (預設 800)</span></label>
+          <input type="number" id="timelineScanInterval" min="500" max="10000" step="100" placeholder="800">
+          <p class="hint-text">每次捲動置頂後的等待時間（預設 800ms）。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>快捷鍵</h3>
+        <div class="shortcut-list">
+          <div class="shortcut-item">
+            <span>切換時間軸</span>
+            <kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>L</kbd>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 資料夾 ── -->
+    <section id="tab-folders" class="tab">
+      <h2>📁 資料夾管理</h2>
+      <p class="desc">管理對話分類資料夾。</p>
+
+      <div class="card">
+        <h3>功能控制</h3>
+        <div class="field toggle-field">
+          <div>
+            <label>啟用資料夾面板</label>
+            <p class="hint-text">嵌入左側導覽列，顯示資料夾與對話分類管理器</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="foldersEnabled"><span class="track"></span></label>
+        </div>
+        <div class="field toggle-field">
+          <div>
+            <label>將資料夾切換為浮動視窗</label>
+            <p class="hint-text">啟用後，面板不再隨左側欄隱藏，並可透過拖曳深藍色標題任意移動位置</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="folderFloatingEnabled"><span class="track"></span></label>
+        </div>
+        <div class="field toggle-field">
+          <div>
+            <label>標記已分類對話</label>
+            <p class="hint-text">在側邊欄歷史紀錄中顯示資料夾圖示，標示該對話是否已分類至資料夾</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="categorizedMarkEnabled"><span class="track"></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>資料夾列表</h3>
+        <p class="hint-text" style="margin-bottom:12px">在 Gemini 頁面上，直接點擊資料夾面板的「＋」新增資料夾。</p>
+        <div class="folder-toolbar" style="margin-bottom:12px">
+          <button class="btn-ghost" id="btn-import-folders">匯入資料夾</button>
+          <button class="btn-ghost" id="btn-export-folders">匯出資料夾</button>
+          <button class="btn-ghost" id="btn-upload-folders">備份至 Google Drive</button>
+          <button class="btn-ghost" id="btn-download-folders">從 Google Drive 還原</button>
+        </div>
+        <div id="folder-list-preview" class="folder-preview">
+          <p class="empty-hint" id="folder-empty">尚無資料夾</p>
+        </div>
+        <button class="btn-ghost" id="btn-clear-folders" style="margin-top:12px">清除所有資料夾</button>
+      </div>
+    </section>
+
+    <!-- ── 提示詞庫 ── -->
+    <section id="tab-prompts" class="tab">
+      <h2><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;vertical-align:-4px;margin-right:6px"><path d="M8 1L2 4l6 3 6-3-6-3z"/><path d="M2 8l6 3 6-3"/><path d="M2 11.5l6 3 6-3"/></svg>提示詞庫</h2>
+      <p class="desc">管理常用提示詞，在任何 AI 介面一鍵插入。</p>
+
+      <div class="card">
+        <h3>功能控制</h3>
+        <div class="field toggle-field">
+          <div>
+            <label>啟用提示詞面板</label>
+            <p class="hint-text">在輸入框旁顯示提示詞庫按鈕</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="promptVaultEnabled"><span class="track"></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>提示詞管理</h3>
+        <div class="prompt-toolbar">
+          <button class="btn-primary" id="btn-add-prompt">＋ 新增提示詞</button>
+          <button class="btn-ghost" id="btn-import-prompts">匯入 JSON</button>
+          <button class="btn-ghost" id="btn-export-prompts">匯出 JSON</button>
+        </div>
+        <div id="prompt-list" class="prompt-list">
+          <p class="empty-hint" id="prompt-empty">尚無提示詞</p>
+        </div>
+      </div>
+
+      <div class="card" id="prompt-editor" hidden>
+        <h3 id="prompt-editor-title">新增提示詞</h3>
+        <div class="field">
+          <label>標題 *</label>
+          <input type="text" id="prompt-title" placeholder="例：程式碼審查">
+        </div>
+        <div class="field">
+          <label>內容 *</label>
+          <textarea id="prompt-content" rows="6" placeholder="請審查以下程式碼並提出改進建議…"></textarea>
+        </div>
+        <div class="field">
+          <label>標籤（逗號分隔）</label>
+          <input type="text" id="prompt-tags" placeholder="程式碼, 審查, 工程">
+        </div>
+        <div class="field-actions">
+          <button class="btn-primary" id="btn-save-prompt">儲存</button>
+          <button class="btn-ghost" id="btn-cancel-prompt">取消</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 匯出 ── -->
+    <section id="tab-export" class="tab">
+      <h2>📤 匯出設定</h2>
+      <p class="desc">設定對話記錄匯出格式與內容。</p>
+
+      <div class="card">
+        <h3>功能控制</h3>
+        <div class="field toggle-field">
+          <div>
+            <label>啟用JSON和MD面板</label>
+            <p class="hint-text">在對話介面上方顯示 JSON 與 Markdown 匯出面板</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="exportPanelEnabled"><span class="track"></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>支援格式</h3>
+        <div class="format-list">
+          <div class="format-item">
+            <span class="format-icon">📋</span>
+            <div>
+              <strong>JSON</strong>
+              <p>包含元資料、時間戳記、星號記錄</p>
+            </div>
+            <span class="format-badge">支援</span>
+          </div>
+          <div class="format-item">
+            <span class="format-icon">📝</span>
+            <div>
+              <strong>Markdown</strong>
+              <p>保留完整格式，適合筆記工具</p>
+            </div>
+            <span class="format-badge">支援</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 進階 ── -->
+    <section id="tab-advanced" class="tab">
+      <h2>🔧 進階設定</h2>
+      <p class="desc">公式複製、引用回覆等進階功能。</p>
+
+      <div class="card">
+        <h3>功能控制</h3>
+        <div class="field toggle-field">
+          <div>
+            <label>公式複製</label>
+            <p class="hint-text">點擊 LaTeX / MathML 公式即可複製原始碼</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="formulaCopyEnabled"><span class="track"></span></label>
+        </div>
+        <div class="field toggle-field">
+          <div>
+            <label>引用回覆</label>
+            <p class="hint-text">選取文字後出現「引用」按鈕，帶入輸入框</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="quoteReplyEnabled"><span class="track"></span></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>資料管理</h3>
+        <div class="data-actions">
+          <button class="btn-ghost" id="btn-export-all">匯出所有資料 (JSON)</button>
+          <button class="btn-danger" id="btn-clear-all">清除所有插件資料</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── 關於 ── -->
+    <section id="tab-about" class="tab">
+      <h2>ℹ 關於 ChatFolio</h2>
+
+      <div class="card about-card">
+        <img src="../icons/icon128.png" class="about-logo-img">
+        <h3>ChatFolio — AI Chat Enhancer</h3>
+        <p class="about-version" id="about-version">版本 1.0.0</p>
+        <p class="about-desc">為 Google Gemini 與 AI Studio 提供全方位增強功能：時間軸導覽、資料夾管理、提示詞庫、多格式匯出，提升您的 AI 工作效率。</p>
+      </div>
+
+      <div class="card">
+        <h3>功能快捷鍵</h3>
+        <div class="shortcut-list">
+          <div class="shortcut-item"><span>切換時間軸</span><div><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>L</kbd></div></div>
+          <div class="shortcut-item"><span>開啟提示詞庫</span><div><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>P</kbd></div></div>
+          <div class="shortcut-item"><span>匯出對話</span><div><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>E</kbd></div></div>
+          <div class="shortcut-item"><span>關閉浮層</span><div><kbd>Esc</kbd></div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>版本資訊</h3>
+        <table class="info-table">
+          <tr><td>版本</td><td id="info-version">1.0.0</td></tr>
+          <tr><td>目標平台</td><td>Chrome / Edge / Firefox / Safari</td></tr>
+          <tr><td>Manifest</td><td>V3</td></tr>
+          <tr><td>授權</td><td>MIT License</td></tr>
+          <tr><td>專案代號</td><td>AI-CHAT-EXT-001</td></tr>
+        </table>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="../libs/googleDrive.js"></script>
+<script src="options.js"></script>
+</body>
+</html>
