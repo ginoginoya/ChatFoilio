@@ -294,6 +294,7 @@
         expandInput: false, defaultModel: '',
         timelineEnabled: true, foldersEnabled: true,
         folderFloatingEnabled: false,
+        folderPinToBottom: false,
         promptVaultEnabled: true,
         exportPanelEnabled: true,
         quoteReplyEnabled: true, formulaCopyEnabled: true,
@@ -303,7 +304,6 @@
         // Experimental feature: auto-recover missing conversation titles from older history blocks.
         titleRepairEnabled: false,
         titleRepairMaxRetries: 3,
-        gemMaxItems: 10,
         categorizedMarkEnabled: true,
       },
 
@@ -1058,6 +1058,275 @@
   };
 
   // ═══════════════════════════════════════════════════════════════
+  //  SidebarUtils — Gemini 左側欄 DOM 解析（僅 UI，不涉及 cf_folders）
+  // ═══════════════════════════════════════════════════════════════
+
+  const SidebarUtils = {
+    /** 與 isCollapsed 量測一致；Gemini 現版以 bard-sidenav 為準（展開 ~287px、圖示列 ~51px） */
+    BARD_SIDENAV_SELECTOR: 'bard-sidenav',
+    ROOT_FALLBACK_SELECTOR: 'mat-sidenav, side-navigation-v2, .side-navigation-v2-container',
+    EMBED_COLLAPSED_WIDTH: 150,
+
+    findBardSidenav() {
+      return document.querySelector(this.BARD_SIDENAV_SELECTOR);
+    },
+
+    findRoot() {
+      const bard = this.findBardSidenav();
+      if (bard) return bard;
+      for (const sel of this.ROOT_FALLBACK_SELECTOR.split(', ')) {
+        const el = document.querySelector(sel);
+        if (el && el.scrollHeight > 100) return el;
+      }
+      return null;
+    },
+
+    findScroller(sidebar) {
+      if (!sidebar) return null;
+      for (const child of sidebar.querySelectorAll('*')) {
+        const ov = getComputedStyle(child).overflowY;
+        if ((ov === 'auto' || ov === 'scroll') && child.scrollHeight > child.clientHeight + 2) {
+          return child;
+        }
+      }
+      return null;
+    },
+
+    _labelMatches(text, label) {
+      const t = text.trim();
+      const l = label.trim();
+      if (!t || !l) return false;
+      if (t === l) return true;
+      const tl = t.toLowerCase();
+      const ll = l.toLowerCase();
+      return tl === ll || t.startsWith(l) || tl.startsWith(ll);
+    },
+
+    findSectionLabel(sidebar, labels) {
+      if (!sidebar) return null;
+      // 依陣列順序優先匹配較精確的標籤（如「近期對話」優於「對話」）
+      for (const label of labels) {
+        for (const el of sidebar.querySelectorAll('*')) {
+          if (el.children.length > 0) continue;
+          if (el.getBoundingClientRect().height <= 0) continue;
+          const t = el.textContent.trim();
+          if (this._labelMatches(t, label)) return el;
+        }
+      }
+      return null;
+    },
+
+    /** 從區塊標題文字節點向上找「整段 section」容器（含標題與列表） */
+    findSectionBranch(textEl, sidebar) {
+      if (!textEl || !sidebar) return null;
+      let header = textEl.parentElement;
+      while (header && header.parentElement && header.parentElement !== sidebar &&
+             (header.parentElement.children?.length ?? 0) < 2) {
+        header = header.parentElement;
+      }
+      let section = header?.parentElement;
+      if (!section || section === sidebar) {
+        section = textEl.parentElement;
+        while (section && section !== sidebar) {
+          if ((section.parentElement?.children?.length ?? 0) >= 2) return section;
+          section = section.parentElement;
+        }
+        return null;
+      }
+      return section;
+    },
+
+    /** LCA：在 upper 區塊與 lower 區塊之間插入（插在 lower 分支之前） */
+    insertBetweenLabels(sidebar, upperEl, lowerEl, panel) {
+      if (!upperEl || !lowerEl || !sidebar) return false;
+      const follows = !!(upperEl.compareDocumentPosition(lowerEl) & Node.DOCUMENT_POSITION_FOLLOWING);
+      if (!follows) return false;
+
+      const upperPath = this.getPath(upperEl, sidebar);
+      const lowerPath = this.getPath(lowerEl, sidebar);
+      let i = 0;
+      while (i < upperPath.length && i < lowerPath.length && upperPath[i] === lowerPath[i]) i++;
+      const lowerBranch = lowerPath[i];
+      if (!lowerBranch?.parentElement || !sidebar.contains(lowerBranch.parentElement)) return false;
+      lowerBranch.parentElement.insertBefore(panel, lowerBranch);
+      return true;
+    },
+
+    getPath(el, sidebar) {
+      const path = [];
+      let cur = el;
+      while (cur && cur !== sidebar) {
+        path.unshift(cur);
+        cur = cur.parentElement;
+      }
+      return path;
+    },
+
+    isCollapsed() {
+      const sidenav = this.findBardSidenav()
+        || document.querySelector(this.ROOT_FALLBACK_SELECTOR);
+      if (!sidenav) return true;
+      return sidenav.getBoundingClientRect().width < this.EMBED_COLLAPSED_WIDTH;
+    },
+
+    markEmbedded(panel) {
+      panel.classList.add('cffld-embedded');
+      if (!this.isCollapsed()) panel.classList.remove('cffld-sidebar-hidden');
+      // 只清除 fixed 備援的 inline 樣式，保留釘選底部時的高度等設定
+      panel.style.position = '';
+      panel.style.left = '';
+      panel.style.right = '';
+      panel.style.top = '';
+      panel.style.bottom = '';
+      panel.style.zIndex = '';
+    },
+
+    applyFixedFallback(panel) {
+      if (!document.body.contains(panel)) document.body.appendChild(panel);
+      panel.classList.remove('cffld-embedded', 'cffld-sidebar-hidden');
+      panel.style.cssText = 'position:fixed;left:0;bottom:80px;z-index:8900;';
+    },
+
+    /** 側欄底部使用者區塊（帳戶列／設定），用於插在正上方 */
+    findProfileFooter(sidebar) {
+      if (!sidebar) return null;
+      const sideRect = sidebar.getBoundingClientRect();
+      if (sideRect.height < 80) return null;
+
+      const isInBottomBand = (rect) =>
+        rect.height >= 32 && rect.height <= 160 &&
+        rect.bottom >= sideRect.bottom - 12 &&
+        rect.top >= sideRect.bottom - 130;
+
+      const settingsBtn = sidebar.querySelector(
+        'button[aria-label*="設定"], button[aria-label*="Settings"], button[aria-label*="setting"]'
+      );
+      if (settingsBtn) {
+        let best = null;
+        let el = settingsBtn;
+        while (el && el !== sidebar) {
+          const r = el.getBoundingClientRect();
+          if (isInBottomBand(r)) best = el;
+          el = el.parentElement;
+        }
+        if (best) return best;
+      }
+
+      let best = null;
+      let bestArea = 0;
+      for (const el of sidebar.querySelectorAll('*')) {
+        if (el.id === 'cf-folders') continue;
+        const r = el.getBoundingClientRect();
+        if (!isInBottomBand(r)) continue;
+        const area = r.width * r.height;
+        if (area > bestArea) {
+          bestArea = area;
+          best = el;
+        }
+      }
+      return best;
+    },
+
+    /** 側欄頂部 Gemini 品牌列（logo／標題列） */
+    findGeminiHeader(sidebar) {
+      if (!sidebar) return null;
+      const sideRect = sidebar.getBoundingClientRect();
+      const topMax = sideRect.top + 120;
+
+      let geminiLeaf = null;
+      for (const el of sidebar.querySelectorAll('*')) {
+        if (el.id === 'cf-folders') continue;
+        if (el.children.length > 0) continue;
+        const t = el.textContent.trim();
+        if (!/^gemini$/i.test(t)) continue;
+        const r = el.getBoundingClientRect();
+        if (r.height <= 0 || r.top > topMax) continue;
+        geminiLeaf = el;
+        break;
+      }
+
+      if (!geminiLeaf) {
+        const branded = sidebar.querySelector(
+          '[aria-label*="Gemini" i], [title*="Gemini" i], a[href*="gemini.google"]'
+        );
+        if (branded) {
+          const r = branded.getBoundingClientRect();
+          if (r.height > 0 && r.top <= topMax) geminiLeaf = branded;
+        }
+      }
+      if (!geminiLeaf) return null;
+
+      let header = geminiLeaf;
+      while (header.parentElement && header.parentElement !== sidebar) {
+        const r = header.getBoundingClientRect();
+        if (r.height > 140) break;
+        const parent = header.parentElement;
+        if ((parent.children?.length ?? 0) >= 2 && r.height <= 110) break;
+        header = parent;
+      }
+      return header;
+    },
+
+    _ensurePinHostLayout(sidebar, parent, panel) {
+      if (!parent.dataset.cfPinHost) {
+        parent.dataset.cfPinHost = '1';
+        const cs = getComputedStyle(parent);
+        if (cs.display !== 'flex') {
+          parent.dataset.cfOrigDisplay = cs.display || '';
+          parent.style.display = 'flex';
+          parent.style.flexDirection = 'column';
+        }
+        const sideH = sidebar.getBoundingClientRect().height;
+        if ((!parent.style.height || parent.style.height === 'auto') && cs.height !== '100%' && sideH > 200) {
+          parent.style.height = '100%';
+        }
+        parent.style.minHeight = '0';
+      }
+      panel.style.flexShrink = '0';
+      const scroller = this.findScroller(sidebar);
+      if (scroller && scroller.parentElement === parent && scroller !== panel) {
+        scroller.style.flex = '1 1 auto';
+        scroller.style.minHeight = '0';
+        const ov = getComputedStyle(scroller).overflowY;
+        if (ov === 'visible') scroller.style.overflowY = 'auto';
+      }
+    },
+
+    /** 將資料夾面板插在 Gemini 品牌列正下方（備援：「新對話」區塊之前） */
+    insertPinBelowGeminiHeader(sidebar, panel) {
+      const header = this.findGeminiHeader(sidebar);
+      if (header?.parentElement && sidebar.contains(header.parentElement)) {
+        const parent = header.parentElement;
+        header.insertAdjacentElement('afterend', panel);
+        this._ensurePinHostLayout(sidebar, parent, panel);
+        return true;
+      }
+
+      const NEW_CHAT_LABELS = ['新對話', 'New chat', 'New Chat'];
+      const newChatEl = this.findSectionLabel(sidebar, NEW_CHAT_LABELS);
+      if (newChatEl) {
+        const branch = this.findSectionBranch(newChatEl, sidebar) || newChatEl.parentElement;
+        if (branch?.parentElement && sidebar.contains(branch.parentElement)) {
+          branch.parentElement.insertBefore(panel, branch);
+          this._ensurePinHostLayout(sidebar, branch.parentElement, panel);
+          return true;
+        }
+      }
+      return false;
+    },
+
+    isPanelBelowGeminiHeader(sidebar, panel) {
+      if (!panel) return false;
+      const header = this.findGeminiHeader(sidebar);
+      if (header && panel.previousElementSibling === header) return true;
+      const NEW_CHAT_LABELS = ['新對話', 'New chat', 'New Chat'];
+      const newChatEl = this.findSectionLabel(sidebar, NEW_CHAT_LABELS);
+      const branch = newChatEl && (this.findSectionBranch(newChatEl, sidebar) || newChatEl.parentElement);
+      return !!(branch && panel.nextElementSibling === branch);
+    },
+  };
+
+  // ═══════════════════════════════════════════════════════════════
   //  FolderModule — 資料夾管理（樹枝狀、嵌入側邊欄）
   // ═══════════════════════════════════════════════════════════════
 
@@ -1066,6 +1335,39 @@
     panel: null,
     _expanded: {},   // folderId → boolean
     _injected: false,
+    _searchQuery: '',
+    _searchScope: 'folder', // 'folder' | 'conv'（互斥）
+    _pinReinjectBusy: false,
+    _LS_SEARCH_QUERY: 'cf_folder_search_query',
+    _LS_SEARCH_SCOPE: 'cf_folder_search_scope',
+    _LS_SEARCH_OPEN: 'cf_folder_search_open',
+
+    _restoreSearchState(searchInput, searchBar) {
+      try {
+        const scope = localStorage.getItem(this._LS_SEARCH_SCOPE);
+        if (scope === 'folder' || scope === 'conv') this._searchScope = scope;
+        const raw = localStorage.getItem(this._LS_SEARCH_QUERY) || '';
+        const open = localStorage.getItem(this._LS_SEARCH_OPEN) === '1';
+        if (raw) {
+          searchInput.value = raw;
+          this._searchQuery = raw.trim().toLowerCase();
+        }
+        if (open || raw.trim()) searchBar.hidden = false;
+      } catch (_) { /* localStorage 不可用時略過 */ }
+    },
+
+    _persistSearchState(searchInput, searchBar) {
+      try {
+        const raw = searchInput?.value ?? '';
+        localStorage.setItem(this._LS_SEARCH_SCOPE, this._searchScope);
+        localStorage.setItem(this._LS_SEARCH_OPEN, searchBar?.hidden ? '0' : '1');
+        if (raw.trim()) {
+          localStorage.setItem(this._LS_SEARCH_QUERY, raw);
+        } else {
+          localStorage.removeItem(this._LS_SEARCH_QUERY);
+        }
+      } catch (_) { /* localStorage 不可用時略過 */ }
+    },
 
     async init() {
       const { cf_folders } = await Storage.getLocal('cf_folders');
@@ -1082,11 +1384,101 @@
       if (typeof CategorizedMarkModule !== 'undefined') CategorizedMarkModule.updateIndex();
 
       await this._applyFloatingState();
+      this._startSidebarWatcher();
       window.addEventListener('resize', () => {
         if (this.panel && this.panel.classList.contains('cf-folders-floating')) {
           this._applyFloatingState();
+        } else {
+          this._syncSidebarEmbedState();
         }
       });
+    },
+
+    _startSidebarWatcher() {
+      if (this._sidebarWatcherStarted) return;
+      this._sidebarWatcherStarted = true;
+
+      const check = debounce(() => this._syncSidebarEmbedState(), 300);
+
+      this._sidebarMutObs = new MutationObserver(check);
+      this._sidebarMutObs.observe(document.body, { childList: true, subtree: true });
+
+      const attachResize = () => {
+        const sidebar = SidebarUtils.findBardSidenav() || SidebarUtils.findRoot();
+        if (!sidebar || this._sidebarResizeObs) return;
+        if (typeof ResizeObserver === 'undefined') return;
+        this._sidebarResizeObs = new ResizeObserver(check);
+        this._sidebarResizeObs.observe(sidebar);
+      };
+
+      const attachBardWatch = () => {
+        const bard = SidebarUtils.findBardSidenav();
+        if (!bard) return;
+
+        if (!this._bardAttrObs) {
+          this._bardAttrObs = new MutationObserver(check);
+          this._bardAttrObs.observe(bard, {
+            attributes: true,
+            attributeFilter: ['class', 'style']
+          });
+        }
+
+        if (!this._bardTransitionEndAttached) {
+          this._bardTransitionEndAttached = true;
+          this._onBardTransitionEnd = (e) => {
+            if (e.target === bard) check();
+          };
+          bard.addEventListener('transitionend', this._onBardTransitionEnd, true);
+        }
+      };
+
+      attachResize();
+      attachBardWatch();
+      [1000, 3000, 6000].forEach(d => setTimeout(() => {
+        attachResize();
+        attachBardWatch();
+      }, d));
+    },
+
+    _syncSidebarEmbedState() {
+      if (!this.panel || SettingsManager.get('folderFloatingEnabled')) return;
+
+      const sidebar = SidebarUtils.findRoot();
+      const collapsed = SidebarUtils.isCollapsed();
+
+      if (collapsed && this.panel.classList.contains('cffld-embedded')) {
+        this.panel.classList.add('cffld-sidebar-hidden');
+      } else {
+        this.panel.classList.remove('cffld-sidebar-hidden');
+      }
+
+      const inSidebar = sidebar && sidebar.contains(this.panel);
+
+      if (this._isPinToBottomActive()) {
+        this._applyPinToBottomState();
+        if (inSidebar && SidebarUtils.isPanelBelowGeminiHeader(sidebar, this.panel)) {
+          this._injected = true;
+          return;
+        }
+        if (this._pinReinjectBusy) return;
+        this._pinReinjectBusy = true;
+        requestAnimationFrame(() => {
+          this._pinReinjectBusy = false;
+          if (!this.panel || SettingsManager.get('folderFloatingEnabled')) return;
+          if (!this._isPinToBottomActive()) return;
+          this._injected = false;
+          this._tryInjectInSidebar();
+        });
+        return;
+      }
+
+      const needsReinject = !inSidebar || !this.panel.classList.contains('cffld-embedded')
+        || this._isWrongEmbedPosition(sidebar);
+
+      if (needsReinject) {
+        this._injected = false;
+        this._tryInjectInSidebar();
+      }
     },
 
     async _applyFloatingState() {
@@ -1137,7 +1529,7 @@
         }
       } else {
         this.panel.classList.remove('cf-folders-floating');
-        this.panel.classList.remove('cffld-embedded'); // 重置嵌入狀態
+        this.panel.classList.remove('cffld-embedded', 'cffld-pinned-bottom'); // 重置嵌入狀態
         this._injected = false; // 允許重新嘗試注入
         this.panel.style.top = '';
         this.panel.style.left = '';
@@ -1236,8 +1628,11 @@
       const iconSyncCloud = `<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4C9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z M5 12h3v5h2v-5h3l-4-4-4 4z M11 12l4 4 4-4h-3V7h-2v5h-3z"/></svg>`;
       
       const iconSearch  = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
+      const iconFile    = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2h5l3 3v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z"/><path d="M9 2v4h4"/><path d="M6 9h4M6 11.5h4"/></svg>`;
       const iconPlus = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="4" x2="8" y2="12"></line><line x1="4" y1="8" x2="12" y2="8"></line></svg>`;
       const iconMinus = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="8" x2="12" y2="8"></line></svg>`;
+      const iconExpandCollapse = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="2.5" x2="8" y2="6.5"/><line x1="5.5" y1="4.5" x2="10.5" y2="4.5"/><line x1="4" y1="11" x2="12" y2="11"/></svg>`;
+      const iconNewFolderBtn = `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5a1 1 0 0 1 1-1h3l1.5 1.5H13a1 1 0 0 1 1 1V12a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V5z"/><path d="M8 7v4M6 9h4"/></svg>`;
 
       this.panel.innerHTML = `
         <div class="cffld-resize-r"></div>
@@ -1252,9 +1647,15 @@
             <span class="cffld-title">資料夾</span>
           </div>
           <div class="cffld-header-btns">
-            <button class="cffld-hbtn cffld-expand-all-btn" title="展開所有資料夾">${iconPlus}</button>
-            <button class="cffld-hbtn cffld-collapse-all-btn" title="收縮所有資料夾">${iconMinus}</button>
+            <div class="cffld-expand-wrap">
+              <button class="cffld-hbtn" data-action="expand-toggle" title="展開／收合所有資料夾">${iconExpandCollapse}</button>
+              <div class="cffld-expand-menu" hidden>
+                <button data-action="expand-all">${iconPlus} 展開所有資料夾</button>
+                <button data-action="collapse-all">${iconMinus} 收縮所有資料夾</button>
+              </div>
+            </div>
             <button class="cffld-hbtn cffld-search-toggle" title="搜尋">${iconSearch}</button>
+            <button class="cffld-hbtn cffld-new-folder-header-btn" title="新增資料夾">${iconNewFolderBtn}</button>
             <div class="cffld-io-wrap">
               <button class="cffld-hbtn" data-action="io-toggle" title="本機匯入／匯出">${iconImport}</button>
               <div class="cffld-io-menu" hidden>
@@ -1273,12 +1674,13 @@
         </div>
         <div class="cffld-search-bar" hidden>
           <input type="text" placeholder="輸入想尋找的資料或對話名稱..." class="cffld-search-input">
-          <button class="cffld-search-clear" title="清除搜尋">✕</button>
+          <div class="cffld-search-filters">
+            <button type="button" class="cffld-search-filter cffld-search-filter-folder is-active" title="只搜尋資料夾名稱">${iconFolder}</button>
+            <button type="button" class="cffld-search-filter cffld-search-filter-conv" title="只搜尋對話名稱">${iconFile}</button>
+          </div>
+          <button type="button" class="cffld-search-clear" title="清除搜尋">✕</button>
         </div>
         <ul class="cffld-list"></ul>
-        <div class="cffld-list-footer">
-          <button class="cffld-new-folder-btn" title="新增資料夾">＋ 新增資料夾</button>
-        </div>
       `;
 
       // 摺疊按鈕
@@ -1288,57 +1690,109 @@
         collapseBtn.title = collapsed ? '展開資料夾面板' : '摺疊資料夾面板';
       });
 
-      // ＋ 展開所有資料夾
-      this.panel.querySelector('.cffld-expand-all-btn').addEventListener('click', async (e) => {
+      // 展開／收合下拉選單
+      const expandBtn  = this.panel.querySelector('[data-action="expand-toggle"]');
+      const expandMenu = this.panel.querySelector('.cffld-expand-menu');
+      expandBtn.addEventListener('click', e => {
         e.stopPropagation();
+        const opening = expandMenu.hidden;
+        expandMenu.hidden = !opening;
+        if (opening) {
+          const rect = expandBtn.getBoundingClientRect();
+          expandMenu.style.top = (rect.bottom + 4) + 'px';
+          const menuW = 148;
+          const left = Math.min(rect.right - menuW, window.innerWidth - menuW - 8);
+          expandMenu.style.left = Math.max(left, 8) + 'px';
+        }
+      });
+      document.addEventListener('mousedown', e => {
+        if (!expandMenu.hidden && !expandBtn.contains(e.target) && !expandMenu.contains(e.target)) {
+          expandMenu.hidden = true;
+        }
+      });
+
+      this.panel.querySelector('[data-action="expand-all"]').addEventListener('click', async () => {
+        expandMenu.hidden = true;
         this.folders.forEach(f => { f.isExpanded = true; });
         await this._save();
         this._render();
         ToastModule.show('已展開所有資料夾', 1500);
       });
 
-      // － 收縮所有資料夾
-      this.panel.querySelector('.cffld-collapse-all-btn').addEventListener('click', async (e) => {
-        e.stopPropagation();
+      this.panel.querySelector('[data-action="collapse-all"]').addEventListener('click', async () => {
+        expandMenu.hidden = true;
         this.folders.forEach(f => { f.isExpanded = false; });
         await this._save();
         this._render();
         ToastModule.show('已收縮所有資料夾', 1500);
       });
 
-      // ＋ 新增資料夾 (Footer 常駐)
-      this.panel.querySelector('.cffld-new-folder-btn').addEventListener('click', () => this._promptCreate(null));
+      this.panel.querySelector('.cffld-new-folder-header-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._promptCreate(null);
+      });
 
       // 搜尋機制
-      this._searchQuery = '';
       const searchToggle = this.panel.querySelector('.cffld-search-toggle');
       const searchBar = this.panel.querySelector('.cffld-search-bar');
       const searchInput = this.panel.querySelector('.cffld-search-input');
       const searchClear = this.panel.querySelector('.cffld-search-clear');
-      
+      const filterFolder = this.panel.querySelector('.cffld-search-filter-folder');
+      const filterConv = this.panel.querySelector('.cffld-search-filter-conv');
+
+      this._restoreSearchState(searchInput, searchBar);
+
       const updateSearch = () => {
         this._searchQuery = searchInput.value.trim().toLowerCase();
+        this._persistSearchState(searchInput, searchBar);
         this._render();
       };
-      
+
+      this._syncSearchFilterUI = () => {
+        filterFolder?.classList.toggle('is-active', this._searchScope === 'folder');
+        filterConv?.classList.toggle('is-active', this._searchScope === 'conv');
+      };
+
+      filterFolder?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this._searchScope === 'folder') return;
+        this._searchScope = 'folder';
+        this._syncSearchFilterUI();
+        this._persistSearchState(searchInput, searchBar);
+        this._render();
+      });
+
+      filterConv?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this._searchScope === 'conv') return;
+        this._searchScope = 'conv';
+        this._syncSearchFilterUI();
+        this._persistSearchState(searchInput, searchBar);
+        this._render();
+      });
+
       searchToggle.addEventListener('click', () => {
-        const isHidden = searchBar.hidden;
-        searchBar.hidden = !isHidden;
-        if (!isHidden) {
+        const wasHidden = searchBar.hidden;
+        searchBar.hidden = !wasHidden;
+        this._persistSearchState(searchInput, searchBar);
+        if (wasHidden) {
           searchInput.focus();
-        } else {
-          searchInput.value = '';
           updateSearch();
         }
       });
-      
+
       searchClear.addEventListener('click', () => {
         searchInput.value = '';
         searchInput.focus();
         updateSearch();
       });
-      
+
+      searchInput.addEventListener('input', () => {
+        this._persistSearchState(searchInput, searchBar);
+      });
       searchInput.addEventListener('input', debounce(updateSearch, 200));
+      this._syncSearchFilterUI();
+      if (this._searchQuery) this._render();
 
       // 大頭針(浮動開關)
       this.panel.querySelector('.cffld-pin-btn').addEventListener('click', (e) => {
@@ -1748,100 +2202,193 @@
       }
     },
 
-    // 依序重試，將面板插入 Gemini 側邊欄的「Gem」與「對話」之間
+    // 依序重試：將面板插在「筆記本」下方、「近期對話」上方
     _tryInjectRetry() {
       [500, 1500, 3000, 5500, 9000].forEach(delay =>
         setTimeout(() => { if (!this._injected) this._tryInjectInSidebar(); }, delay)
       );
     },
 
+    _isPinToBottomActive() {
+      return !!SettingsManager.get('folderPinToBottom') && !SettingsManager.get('folderFloatingEnabled');
+    },
+
+    _applyPinToBottomState() {
+      if (!this.panel) return;
+      const pinned = this._isPinToBottomActive() && this.panel.classList.contains('cffld-embedded');
+      this.panel.classList.toggle('cffld-pinned-bottom', pinned);
+      this._updatePinnedTailBuffer();
+    },
+
+    _isWrongEmbedPosition(sidebar) {
+      if (!this.panel?.isConnected || !sidebar) return false;
+
+      if (this._isPinToBottomActive()) {
+        return !SidebarUtils.isPanelBelowGeminiHeader(sidebar, this.panel);
+      }
+
+      const NOTEBOOK_LABELS = ['筆記本', '記事本', 'Notebook', 'Notebooks'];
+      const notebookEl = SidebarUtils.findSectionLabel(sidebar, NOTEBOOK_LABELS);
+      if (!notebookEl) return false;
+      return !!(this.panel.compareDocumentPosition(notebookEl) & Node.DOCUMENT_POSITION_FOLLOWING);
+    },
+
     _tryInjectInSidebar() {
       if (!SettingsManager.get('foldersEnabled')) return false;
       if (SettingsManager.get('folderFloatingEnabled')) return false;
 
-      const sidebarCandidates = [
-        'nav', 'mat-sidenav', '[class*="sidenav"]', '[class*="side-nav"]',
-        '[class*="sidebar"]', '[role="navigation"]'
-      ];
-      let sidebar = null;
-      for (const sel of sidebarCandidates) {
-        const el = document.querySelector(sel);
-        if (el && el.scrollHeight > 100) { sidebar = el; break; }
-      }
+      const sidebar = SidebarUtils.findRoot();
       if (!sidebar) {
-        if (!document.body.contains(this.panel)) document.body.appendChild(this.panel);
+        SidebarUtils.applyFixedFallback(this.panel);
         return false;
       }
 
-      // ── LCA 算法：找到 「Gem」與「對話」的最近公共祖先，
-      //    在公共祖先層級把面板插在「對話分支」之前 ──────────────
-      const getPath = (el) => {
-        const path = [];
-        let cur = el;
-        while (cur && cur !== sidebar) { path.unshift(cur); cur = cur.parentElement; }
-        return path;
+      if (this._injected && this.panel?.classList.contains('cffld-embedded')) {
+        if (!this._isWrongEmbedPosition(sidebar)) return true;
+        this._injected = false;
+      }
+
+      const NOTEBOOK_LABELS = ['筆記本', '記事本', 'Notebook', 'Notebooks'];
+      const RECENT_LABELS = ['近期對話', '對話', 'Recent chats', 'Recent', 'Chats', 'Conversations'];
+      const GEM_LABELS = ['Gem', 'Gems'];
+
+      const finishInsert = () => {
+        SidebarUtils.markEmbedded(this.panel);
+        this._applyPinToBottomState();
+        this._injected = true;
+        if (SidebarUtils.isCollapsed()) this.panel.classList.add('cffld-sidebar-hidden');
+        return true;
       };
 
-      let gemTextEl = null, convTextEl = null;
-      for (const el of sidebar.querySelectorAll('*')) {
-        if (el.children.length === 0) {
-          const t = el.textContent.trim();
-          if (t === 'Gem'  && !gemTextEl)  gemTextEl  = el;
-          if (t === '對話' && !convTextEl) convTextEl = el;
-        }
-        if (gemTextEl && convTextEl) break;
-      }
+      const tryInsert = (parent, before) => {
+        if (!parent || !before || !sidebar.contains(parent)) return false;
+        parent.insertBefore(this.panel, before);
+        return finishInsert();
+      };
 
-      if (gemTextEl && convTextEl) {
-        const gemPath  = getPath(gemTextEl);
-        const convPath = getPath(convTextEl);
-
-        // 找路徑分歧點（即 LCA 的下一層）
-        let i = 0;
-        while (i < gemPath.length && i < convPath.length && gemPath[i] === convPath[i]) i++;
-
-        // convPath[i] 是包含「對話」的分支，直接插在它之前
-        const convBranch = convPath[i];
-        if (convBranch?.parentElement && sidebar.contains(convBranch)) {
-          convBranch.parentElement.insertBefore(this.panel, convBranch);
-          this.panel.style.cssText = '';  // 清除 fixed 備援的 inline 樣式
-          this.panel.classList.add('cffld-embedded');
+      // 釘選頂部：插在 Gemini 品牌列正下方
+      if (this._isPinToBottomActive()) {
+        SidebarUtils.markEmbedded(this.panel);
+        if (SidebarUtils.insertPinBelowGeminiHeader(sidebar, this.panel)) {
+          this._applyPinToBottomState();
           this._injected = true;
+          if (SidebarUtils.isCollapsed()) this.panel.classList.add('cffld-sidebar-hidden');
           return true;
         }
+        console.warn('[ChatFolio] 無法將資料夾固定於 Gemini 下方，將稍後重試');
+        return false;
       }
 
-      // ── 備援 A：找到「對話」後，向上找到兄弟節點數 ≥ 2 的層級 ──
-      if (convTextEl) {
-        let candidate = convTextEl.parentElement;
+      const notebookEl = SidebarUtils.findSectionLabel(sidebar, NOTEBOOK_LABELS);
+      const recentEl = SidebarUtils.findSectionLabel(sidebar, RECENT_LABELS);
+
+      // 策略 A（首選）：筆記本 與 近期對話 之間
+      if (notebookEl && recentEl) {
+        if (SidebarUtils.insertBetweenLabels(sidebar, notebookEl, recentEl, this.panel)) {
+          return finishInsert();
+        }
+        const recentBranch = SidebarUtils.findSectionBranch(recentEl, sidebar);
+        if (recentBranch && tryInsert(recentBranch.parentElement, recentBranch)) return true;
+      }
+
+      // 策略 B：僅找到「近期對話」→ 插在其 section 之前（勿用整段 side-navigation-content）
+      if (recentEl) {
+        const recentBranch = SidebarUtils.findSectionBranch(recentEl, sidebar);
+        if (recentBranch && tryInsert(recentBranch.parentElement, recentBranch)) return true;
+        let candidate = recentEl.parentElement;
         while (candidate && candidate !== sidebar) {
           if ((candidate.parentElement?.children?.length ?? 0) >= 2) {
-            candidate.parentElement.insertBefore(this.panel, candidate);
-            this.panel.style.cssText = '';  // 清除 fixed 備援的 inline 樣式
-            this.panel.classList.add('cffld-embedded');
-            this._injected = true;
-            return true;
+            if (tryInsert(candidate.parentElement, candidate)) return true;
           }
           candidate = candidate.parentElement;
         }
       }
 
-      // ── 備援 B：fixed 定位掛在 body（不破壞 sidebar 結構） ──
-      if (!document.body.contains(this.panel)) {
-        document.body.appendChild(this.panel);
+      // 策略 C：conversations-list（僅近期清單元件，非整個側欄捲動根）
+      const convList = sidebar.querySelector('conversations-list, .conversations-container');
+      if (convList) {
+        const branch = SidebarUtils.findSectionBranch(recentEl || convList, sidebar) || convList;
+        const parent = branch.parentElement;
+        if (parent && sidebar.contains(parent) && tryInsert(parent, branch)) return true;
       }
-      // fixed 備援：放在左側
-      this.panel.style.cssText = 'position:fixed;left:0;bottom:80px;z-index:8900;';
+
+      // 策略 D：備援 LCA（Gem 與 近期對話 之間，舊版版面）
+      const gemTextEl = SidebarUtils.findSectionLabel(sidebar, GEM_LABELS);
+      if (gemTextEl && recentEl) {
+        if (SidebarUtils.insertBetweenLabels(sidebar, gemTextEl, recentEl, this.panel)) {
+          return finishInsert();
+        }
+      }
+
+      // 策略 E：fixed 備援
+      console.warn('[ChatFolio] 資料夾嵌入失敗，使用 fixed 備援');
+      this._injected = false;
+      SidebarUtils.applyFixedFallback(this.panel);
       return false;
+    },
+
+    _buildSearchVisibility(q) {
+      if (!q) return null;
+
+      const visibleFolderIds = new Set();
+      const convIdsByFolder = new Map();
+
+      const addAncestors = (folderId) => {
+        let cur = folderId;
+        while (cur) {
+          visibleFolderIds.add(cur);
+          cur = this.folders.find(f => f.id === cur)?.parentId || null;
+        }
+      };
+
+      const addSubtree = (folderId) => {
+        addAncestors(folderId);
+        const stack = [folderId];
+        while (stack.length) {
+          const id = stack.pop();
+          visibleFolderIds.add(id);
+          convIdsByFolder.set(id, null);
+          this.folders.filter(f => f.parentId === id).forEach(c => stack.push(c.id));
+        }
+      };
+
+      if (this._searchScope === 'folder') {
+        for (const f of this.folders) {
+          if (f.name.toLowerCase().includes(q)) addSubtree(f.id);
+        }
+      } else {
+        for (const f of this.folders) {
+          for (const convId of (f.conversationIds || [])) {
+            const name = (f._convNames?.[convId] || '').toLowerCase();
+            if (!name.includes(q)) continue;
+            addAncestors(f.id);
+            const existing = convIdsByFolder.get(f.id);
+            if (existing && existing !== null) {
+              existing.add(convId);
+            } else {
+              convIdsByFolder.set(f.id, new Set([convId]));
+            }
+          }
+        }
+      }
+
+      return { visibleFolderIds, convIdsByFolder };
     },
 
     _render() {
       const list = this.panel.querySelector('.cffld-list');
       list.innerHTML = '';
-      
+
+      const q = this._searchQuery || '';
+      const visibility = q ? this._buildSearchVisibility(q) : null;
+
       const totalConvs = this.folders.reduce((acc, f) => acc + (f.conversationIds?.length || 0), 0);
 
-      this.folders.filter(f => !f.parentId).forEach(f => this._renderFolder(f, list, 0));
+      const roots = this.folders.filter(f => !f.parentId);
+      const rootsToRender = visibility
+        ? roots.filter(f => visibility.visibleFolderIds.has(f.id))
+        : roots;
+      rootsToRender.forEach(f => this._renderFolder(f, list, 0, visibility));
 
       if (this.folders.length === 0 || totalConvs === 0) {
         const emptyState = document.createElement('div');
@@ -1860,26 +2407,53 @@
         });
         list.appendChild(emptyState);
       }
+
+      this._updatePinnedTailBuffer();
     },
 
-    _renderFolder(folder, container, depth) {
-      const q = this._searchQuery || '';
-      
-      const checkMatch = (f) => {
-        if (!q) return true;
-        if (f.name.toLowerCase().includes(q)) return true;
-        const cIds = f.conversationIds || [];
-        if (cIds.some(id => (f._convNames?.[id] || '').toLowerCase().includes(q))) return true;
-        const ch = this.folders.filter(sub => sub.parentId === f.id);
-        return ch.some(sub => checkMatch(sub));
-      };
+    /** 頂部釘選時，若樹狀列表最後一列為對話，列表底多留 6px */
+    _updatePinnedTailBuffer() {
+      if (!this.panel) return;
+      const list = this.panel.querySelector('.cffld-list');
+      if (!list) return;
 
-      if (!checkMatch(folder)) return;
+      if (!this.panel.classList.contains('cffld-pinned-bottom')) {
+        this.panel.classList.remove('cffld-tail-conv');
+        return;
+      }
+
+      let lastLeaf = null;
+      const visit = (container) => {
+        for (const child of container.children) {
+          if (child.classList.contains('cffld-empty-state')) continue;
+          if (child.classList.contains('cffld-conv-item')) {
+            lastLeaf = child;
+          } else if (child.classList.contains('cffld-item')) {
+            lastLeaf = child.querySelector(':scope > .cffld-row') || child;
+            const childUl = child.querySelector(':scope > ul.cffld-children');
+            if (!childUl) continue;
+            const toggle = child.querySelector(':scope > .cffld-row .cffld-toggle');
+            if (toggle?.dataset.expanded !== 'false') visit(childUl);
+          }
+        }
+      };
+      visit(list);
+
+      this.panel.classList.toggle('cffld-tail-conv', !!lastLeaf?.classList?.contains('cffld-conv-item'));
+    },
+
+    _renderFolder(folder, container, depth, visibility = null) {
+      const q = this._searchQuery || '';
+
+      if (visibility && !visibility.visibleFolderIds.has(folder.id)) return;
 
       const isExpanded = q ? true : (folder.isExpanded !== false);
       const children   = this.folders.filter(f => f.parentId === folder.id);
+      const visibleChildren = visibility
+        ? children.filter(c => visibility.visibleFolderIds.has(c.id))
+        : children;
       const convIds    = folder.conversationIds || [];
-      const hasContent = children.length > 0 || convIds.length > 0;
+      const hasContent = visibleChildren.length > 0 || convIds.length > 0;
       const color      = folder.color || '#1A56DB';
       const indent     = depth * 14;
 
@@ -1975,11 +2549,18 @@
         childUl.className = 'cffld-children';
 
         // 子資料夾（遞迴）
-        children.forEach(c => this._renderFolder(c, childUl, depth + 1));
+        visibleChildren.forEach(c => this._renderFolder(c, childUl, depth + 1, visibility));
 
         let matchConvIds = convIds;
-        if (q && !folder.name.toLowerCase().includes(q)) {
-          matchConvIds = convIds.filter(id => (folder._convNames?.[id] || '').toLowerCase().includes(q));
+        if (visibility) {
+          const allowed = visibility.convIdsByFolder.get(folder.id);
+          if (allowed === null) {
+            matchConvIds = convIds;
+          } else if (allowed) {
+            matchConvIds = convIds.filter(id => allowed.has(id));
+          } else {
+            matchConvIds = [];
+          }
         }
 
         // 對話列表
@@ -3064,6 +3645,11 @@
             this._syncTabTitle();
             this._scheduleTitleRepair(`route-${delay}`, 0);
             FolderPathModule.update();
+            if (SettingsManager.get('foldersEnabled') && !SettingsManager.get('folderFloatingEnabled')) {
+              FolderModule._injected = false;
+              FolderModule._tryInjectInSidebar();
+              FolderModule._syncSidebarEmbedState();
+            }
           }, delay));
           // 捲動側邊欄至當前對話項目，觸發 Gemini lazy-render 頂部標題
           this._scrollSidebarToActive();
@@ -3193,21 +3779,7 @@
 
 
     _isSidebarCollapsed() {
-      const sidenav = document.querySelector('mat-sidenav, bard-sidenav, side-navigation-v2, .side-navigation-v2-container, nav');
-      if (!sidenav) return true;
-
-      // 優先檢查：是否能看到對話歷史列表
-      const list = sidenav.querySelector('conversations-list, .conversations-container, side-navigation-content, .side-navigation-content');
-      if (list) {
-        const rect = list.getBoundingClientRect();
-        // 增加判斷可見性：如果寬度小於 150px (圖示模式) 或隱藏，視為收合
-        if (rect.width > 150 && rect.height > 100) return false;
-      }
-
-      // 次要檢查：容器寬度
-      const rect = sidenav.getBoundingClientRect();
-      // 在圖示模式下寬度通常在 60-80px，展開後應為 250-300px
-      return rect.width < 150;
+      return SidebarUtils.isCollapsed();
     },
 
     async _ensureSidebarOpen() {
@@ -3258,8 +3830,6 @@
     async _loadSidebarHistoryInChunks(retryLimit) {
       // 執行自動讀取標題時，如果發現側邊欄收合，則先強制開啟
       await this._ensureSidebarOpen();
-      // 同時確保「對話」分組是展開狀態，否則掃描不到 DOM
-      await NativeSidebarModule.expandSection('對話');
       const scroller = this._findSidebarScroller();
       if (!scroller) return false;
 
@@ -3858,8 +4428,17 @@
         }
       }
 
+      if (oldSettings.folderPinToBottom !== newSettings.folderPinToBottom) {
+        if (typeof FolderModule !== 'undefined' && FolderModule.panel) {
+          FolderModule._injected = false;
+          FolderModule._applyPinToBottomState();
+          if (!newSettings.folderFloatingEnabled) FolderModule._tryInjectInSidebar();
+        }
+      }
+
       if (typeof FolderModule !== 'undefined' && FolderModule.panel && !FolderModule.panel.hidden) {
         FolderModule._applyFloatingState();
+        FolderModule._applyPinToBottomState();
       }
     }
     if (msg.type === 'QUOTE_SELECTION' && msg.text) {
@@ -4121,149 +4700,6 @@
   };
 
   // ═══════════════════════════════════════════════════════════════
-  //  NativeSidebarModule — 收合原生側邊欄區塊
-  // ═══════════════════════════════════════════════════════════════
-
-  const NativeSidebarModule = {
-    _sections: ['筆記本', 'Gem', '對話'],
-    _collapsedState: {},
-
-    async expandSection(name) {
-      this._collapsedState[name] = false;
-      await Storage.setLocal({ cf_sidebar_collapsed: this._collapsedState });
-      
-      // 先執行一次掃描，確保 DOM 節點已被識別並加上屬性
-      this._applyAll();
-
-      // 強制移除 DOM 上的收合類名
-      const sec = document.querySelector(`[data-cf-section-name="${name}"]`);
-      if (sec) sec.classList.remove('cf-nat-collapsed');
-      
-      await new Promise(r => setTimeout(r, 450)); // 等待收合動畫結束
-    },
-
-    async init() {
-      const { cf_sidebar_collapsed } = await Storage.getLocal('cf_sidebar_collapsed');
-      this._collapsedState = cf_sidebar_collapsed || {};
-      
-      this._applyAll();
-      // 持續檢查（Gemini 的 Angular 可能會無預警重繪 DOM）
-      setInterval(() => this._applyAll(), 2500);
-    },
-
-    _applyAll() {
-      const sidebar = document.querySelector('nav, mat-sidenav, [class*="sidenav"], [class*="side-nav"], [class*="sidebar"]');
-      if (!sidebar) return;
-
-      this._sections.forEach(name => this._processSection(sidebar, name));
-    },
-
-    _processSection(sidebar, name) {
-      // 1. 找包含該名稱的「最末端」文字元素 (排除隱藏或空元素)
-      let textEl = null;
-      const all = sidebar.querySelectorAll('*');
-      for (let i = 0; i < all.length; i++) {
-        const el = all[i];
-        if (el.children.length === 0 && el.textContent.trim() === name && el.getBoundingClientRect().height > 0) {
-          // 如果該元素所在標頭已經有按鈕，則視為已處理
-          const existingHeader = el.closest('[data-cf-header]');
-          if (existingHeader && existingHeader.querySelector('.cf-nat-collapse-btn')) {
-             continue;
-          }
-          textEl = el;
-          break;
-        }
-      }
-      if (!textEl) return;
-
-      // 2. 向上找 Header 容器
-      let header = textEl.parentElement;
-      while (header && header.parentElement && header.parentElement !== sidebar && 
-             header.parentElement.children.length < 2) {
-        header = header.parentElement;
-      }
-      if (!header) return;
-
-      // 3. 向外找 Section 總容器 (包含 Header 與 List)
-      let section = header.parentElement;
-      if (!section || section === sidebar) return;
-      
-      header.setAttribute('data-cf-header', 'true');
-      const style = window.getComputedStyle(header);
-      if (style.display !== 'flex') {
-        header.style.display = 'flex';
-        header.style.alignItems = 'center';
-        header.style.gap = '4px';
-      }
-
-      // 4. 重複檢查與清理
-      const existingBtn = header.querySelector('.cf-nat-collapse-btn');
-      if (existingBtn) {
-         if (this._collapsedState[name]) section.classList.add('cf-nat-collapsed');
-         else section.classList.remove('cf-nat-collapsed');
-         return;
-      }
-
-      const btn = document.createElement('button');
-      btn.className = 'cf-nat-collapse-btn';
-      btn.innerHTML = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6l4 4 4-4"/></svg>`;
-      btn.title = `收合／展開 ${name}`;
-
-      header.insertBefore(btn, header.firstChild);
-
-      if (this._collapsedState[name]) {
-        section.classList.add('cf-nat-collapsed');
-      }
-
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation(); e.preventDefault();
-        const isCollapsed = section.classList.toggle('cf-nat-collapsed');
-        this._collapsedState[name] = isCollapsed;
-        Storage.setLocal({ cf_sidebar_collapsed: this._collapsedState });
-      });
-
-      section.classList.add('cf-nat-section');
-      section.setAttribute('data-cf-section-name', name);
-
-      if (name === 'Gem') {
-        this._updateGemVisibility(section);
-      }
-    },
-
-    _updateGemVisibility(section) {
-      const max = SettingsManager.get('gemMaxItems') || 10;
-      // 1. 找尋 Gem 連結項目 (a[href*="/gem/"])
-      //    Gemini 通常會把 a 包在 div 或 li 裡面
-      const items = [...section.querySelectorAll('a[href*="/gem/"]')];
-      if (items.length === 0) return;
-
-      items.forEach((item, idx) => {
-        const isVisible = idx < max;
-        // 向上尋找最接近 section 的頂層列表項容器
-        let entry = item;
-        while (entry.parentElement && entry.parentElement !== section && 
-               !entry.parentElement.classList.contains('cf-nat-section')) {
-          entry = entry.parentElement;
-        }
-
-        if (isVisible) {
-          entry.style.display = '';
-          entry.style.visibility = 'visible';
-          entry.style.maxHeight = 'none';
-        } else {
-          entry.style.display = 'none';
-        }
-      });
-
-      // 2. 自動點擊「顯示更多」按鈕（如果存在且數量不夠）
-      const moreBtn = section.querySelector('button[aria-label*="更多"], button[aria-label*="More"]');
-      if (moreBtn && items.length < max && moreBtn.offsetParent !== null) {
-        moreBtn.click();
-      }
-    }
-  };
-
-  // ═══════════════════════════════════════════════════════════════
   //  NativeDeletionModule — 監聽原生刪除動作並同步
   // ═══════════════════════════════════════════════════════════════
 
@@ -4371,9 +4807,6 @@
     // DOM 觀察器
     DOMObserver.init();
 
-    // 原生側邊欄收合
-    NativeSidebarModule.init();
-
     // 原生刪除同步
     NativeDeletionModule.init();
 
@@ -4404,6 +4837,7 @@
       if (!SettingsManager.get('categorizedMarkEnabled')) {
         // 如果關閉，移除現有標記
         document.querySelectorAll('.cf-cat-mark').forEach(el => el.remove());
+        document.querySelectorAll('.cf-cat-mark-host').forEach(el => el.classList.remove('cf-cat-mark-host'));
         return;
       }
 
@@ -4420,22 +4854,22 @@
           if (!hasMark) this._injectMark(link);
         } else if (hasMark) {
           hasMark.remove();
+          link.classList.remove('cf-cat-mark-host');
         }
       });
     },
 
     _injectMark(link) {
-      // 找尋文字容器 (Gemini 的結構可能包含多層 span/div)
-      const textNode = link.querySelector('span, div[class*="text"], div[class*="title"]');
-      if (!textNode) return;
+      if (link.querySelector('.cf-cat-mark')) return;
 
       const mark = document.createElement('span');
       mark.className = 'cf-cat-mark';
+      mark.setAttribute('aria-hidden', 'true');
       mark.textContent = '📁';
       mark.title = '此對話已分類至 ChatFolio 資料夾中';
-      mark.style.cssText = 'margin-right: 6px; font-size: 0.9em; filter: grayscale(0.2);';
-      
-      textNode.prepend(mark);
+
+      link.classList.add('cf-cat-mark-host');
+      link.insertBefore(mark, link.firstChild);
     }
   };
 

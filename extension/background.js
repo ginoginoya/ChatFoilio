@@ -241,6 +241,7 @@ function getDefaultSettings() {
     titleRepairMaxRetries: 5,
     foldersEnabled: true,
     folderFloatingEnabled: false,
+    folderPinToBottom: false,
     promptVaultEnabled: true,
     timestampsEnabled: true,
     quoteReplyEnabled: true,

@@ -27,12 +27,11 @@ const DEFAULTS = {
   // Experimental feature: auto-recover missing conversation titles from older history blocks.
   titleRepairEnabled: false,
   titleRepairMaxRetries: 3,
-  foldersEnabled: true, folderFloatingEnabled: false, promptVaultEnabled: true,
+  foldersEnabled: true, folderFloatingEnabled: false, folderPinToBottom: false, promptVaultEnabled: true,
   syncDeleteEnabled: true,
   exportPanelEnabled: true,
   quoteReplyEnabled: true,
   formulaCopyEnabled: true,
-  gemMaxItems: 10,
   categorizedMarkEnabled: true
 };
 
@@ -67,8 +66,7 @@ function applyToUI(s) {
   // Range sliders
   const ranges = [
     ['chatWidth', 'chatWidth-val'],
-    ['fontSize', 'fontSize-val'],
-    ['gemMaxItems', 'gemMaxItems-val']
+    ['fontSize', 'fontSize-val']
   ];
   ranges.forEach(([id, valId]) => {
     const el = $(id);
@@ -84,7 +82,7 @@ function applyToUI(s) {
     'timelineEnabled',
     'timelineScanEnabled',
     'titleRepairEnabled',
-    'foldersEnabled', 'folderFloatingEnabled', 'promptVaultEnabled', 'syncDeleteEnabled',
+    'foldersEnabled', 'folderFloatingEnabled', 'folderPinToBottom', 'promptVaultEnabled', 'syncDeleteEnabled',
     'exportPanelEnabled',
     'quoteReplyEnabled', 'formulaCopyEnabled',
     'categorizedMarkEnabled'
@@ -185,12 +183,12 @@ function readFromUI() {
     })(),
     foldersEnabled:    val('foldersEnabled'),
     folderFloatingEnabled: val('folderFloatingEnabled'),
+    folderPinToBottom: val('folderPinToBottom'),
     promptVaultEnabled:val('promptVaultEnabled'),
     syncDeleteEnabled: val('syncDeleteEnabled'),
     exportPanelEnabled:val('exportPanelEnabled'),
     quoteReplyEnabled: val('quoteReplyEnabled'),
     formulaCopyEnabled:val('formulaCopyEnabled'),
-    gemMaxItems: val('gemMaxItems'),
     categorizedMarkEnabled: val('categorizedMarkEnabled')
   };
 }

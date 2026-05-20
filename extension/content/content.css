@@ -89,6 +89,25 @@
   pointer-events: none;
 }
 
+/* 原生側欄：已分類對話的資料夾圖示（顯示在標題左側） */
+a.cf-cat-mark-host {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 4px;
+}
+
+.cf-cat-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9em;
+  line-height: 1;
+  filter: grayscale(0.2);
+  pointer-events: none;
+}
+
 /* Keep Gemini's native top-right action menu clickable above header/title layers. */
 .right-section,
 conversation-actions-icon,
@@ -424,6 +443,30 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
   flex-shrink: 0;
 }
 
+/* 側欄收合（bard-sidenav 寬度不足）時隱藏嵌入面板 */
+#cf-folders.cffld-embedded.cffld-sidebar-hidden {
+  display: none !important;
+}
+
+/* 固定於側欄頂部（Gemini 標題正下方） */
+#cf-folders.cffld-pinned-bottom.cffld-embedded {
+  flex-shrink: 0;
+  position: relative;
+  background: var(--cf-bg);
+  border-bottom: 1px solid var(--cf-border);
+  box-shadow: none;
+}
+
+#cf-folders.cffld-pinned-bottom .cffld-list {
+  max-height: min(38vh, 320px);
+  overflow-y: auto;
+}
+
+/* 頂部釘選且最後一列為對話時，列表底多 6px（原 4px → 10px） */
+#cf-folders.cffld-pinned-bottom.cffld-tail-conv .cffld-list {
+  padding-bottom: 6px;
+}
+
 /* 浮動面板模式 */
 #cf-folders.cf-folders-floating {
   position: fixed !important;
@@ -521,7 +564,7 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
   border: 1px solid var(--cf-border);
   color: var(--cf-text);
   border-radius: 4px;
-  padding: 4px 24px 4px 8px;
+  padding: 4px 76px 4px 8px;
   font-size: 13px;
   outline: none;
   box-sizing: border-box;
@@ -529,15 +572,53 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
 .cffld-search-input:focus {
   border-color: var(--cf-primary);
 }
+.cffld-search-filters {
+  position: absolute;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.cffld-search-filter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--cf-text3);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.cffld-search-filter svg {
+  width: 14px;
+  height: 14px;
+}
+.cffld-search-filter:hover {
+  background: var(--cf-hover);
+  color: var(--cf-text);
+}
+.cffld-search-filter.is-active {
+  color: var(--cf-primary);
+  border-color: var(--cf-primary);
+  background: rgba(26, 86, 219, .12);
+}
+.cffld-search-filter-folder.is-active svg {
+  color: #f5a623;
+}
 .cffld-search-clear {
   position: absolute;
-  right: 12px;
+  right: 8px;
   background: none;
   border: none;
   color: var(--cf-text3);
   cursor: pointer;
   font-size: 11px;
   padding: 4px;
+  line-height: 1;
 }
 .cffld-search-clear:hover {
   color: var(--cf-text);
@@ -685,12 +766,14 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
 /* 本機匯入匯出下拉
    使用 position:fixed + JS 動態座標，避免被 overflow:hidden 裁切 */
 .cffld-io-wrap,
-.cffld-sync-wrap {
+.cffld-sync-wrap,
+.cffld-expand-wrap {
   position: static;
 }
 
 .cffld-io-menu,
-.cffld-sync-menu {
+.cffld-sync-menu,
+.cffld-expand-menu {
   position: fixed;
   /* 脫離 overflow:hidden 裁切範圍 */
   background: var(--cf-bg);
@@ -705,12 +788,14 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
 }
 
 .cffld-io-menu:not([hidden]),
-.cffld-sync-menu:not([hidden]) {
+.cffld-sync-menu:not([hidden]),
+.cffld-expand-menu:not([hidden]) {
   display: flex;
 }
 
 .cffld-io-menu button,
-.cffld-sync-menu button {
+.cffld-sync-menu button,
+.cffld-expand-menu button {
   background: none;
   border: none;
   cursor: pointer;
@@ -727,7 +812,8 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
 }
 
 .cffld-io-menu button:hover,
-.cffld-sync-menu button:hover {
+.cffld-sync-menu button:hover,
+.cffld-expand-menu button:hover {
   background: var(--cf-hover);
   color: var(--cf-text);
 }
@@ -759,32 +845,7 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
   background: var(--cf-text3);
 }
 
-/* ── 資料夾底部與空狀態 ─────────────────────────────────────── */
-.cffld-list-footer {
-  padding: 4px 6px;
-  border-top: 1px solid var(--cf-border);
-  background: var(--cf-bg2);
-  flex-shrink: 0;
-}
-
-.cffld-new-folder-btn {
-  width: 100%;
-  background: none;
-  border: 1px dashed var(--cf-border);
-  cursor: pointer;
-  padding: 4px 0;
-  border-radius: 6px;
-  color: var(--cf-text3);
-  font-size: 12px;
-  transition: all .15s;
-}
-
-.cffld-new-folder-btn:hover {
-  background: var(--cf-hover);
-  color: var(--cf-text);
-  border-color: var(--cf-text3);
-}
-
+/* ── 空狀態 ───────────────────────────────────────────────── */
 .cffld-empty-state {
   display: flex;
   align-items: center;
@@ -1870,63 +1931,6 @@ button[data-test-id="conversation-actions-menu-icon-button"] {
 @keyframes vtoast-out {
   from { opacity: 1; transform: translateY(0) scale(1); }
   to { opacity: 0; transform: translateY(-10px) scale(0.95); }
-}
-
-/* ── Native Sidebar Section Collapse ── */
-.cf-nat-collapse-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--cf-text3);
-  padding: 0;
-  margin-right: -2px;
-  margin-left: -10px;
-  border-radius: 4px;
-  transition: background .12s, color .12s, transform .2s cubic-bezier(.4, 0, .2, 1);
-  flex: 0 0 32px;
-  z-index: 5;
-  box-sizing: border-box;
-}
-
-.cf-nat-collapse-btn:hover {
-  background: var(--cf-hover);
-  color: var(--cf-text);
-}
-
-.cf-nat-collapse-btn svg {
-  width: 14px;
-  height: 14px;
-  transition: transform .2s cubic-bezier(.4, 0, .2, 1);
-}
-
-.cf-nat-collapsed .cf-nat-collapse-btn svg {
-  transform: rotate(-90deg);
-}
-
-/* 
-   改進的收合邏輯：
-   使用 max-height/opacity 組合而非 display:none，減少框架重繪異常。
-*/
-.cf-nat-collapsed > *:not([data-cf-header]):not(#cf-folders):not([data-cf-ignore]) {
-  max-height: 0 !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-  overflow: hidden !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-}
-
-/* Ensure the header container itself is visible */
-[data-cf-header] {
-  visibility: visible !important;
-  opacity: 1 !important;
 }
 
 /* ── Header Breadcrumb ── */

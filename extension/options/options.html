@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
@@ -62,16 +62,6 @@
             <input type="range" id="fontSize" min="10" max="24" step="1">
             <span class="range-val" id="fontSize-val">14</span>
             <span class="unit">px</span>
-          </div>
-        </div>
-        <div class="field">
-          <label>側邊欄 Gem 顯示數量
-            <span class="hint">2 – 10 (預設 10)</span>
-          </label>
-          <div class="range-row">
-            <input type="range" id="gemMaxItems" min="2" max="10" step="1">
-            <span class="range-val" id="gemMaxItems-val">10</span>
-            <span class="unit">個</span>
           </div>
         </div>
       </div>
@@ -168,6 +158,13 @@
             <p class="hint-text">啟用後，面板不再隨左側欄隱藏，並可透過拖曳深藍色標題任意移動位置</p>
           </div>
           <label class="switch"><input type="checkbox" id="folderFloatingEnabled"><span class="track"></span></label>
+        </div>
+        <div class="field toggle-field">
+          <div>
+            <label>固定於側欄頂部</label>
+            <p class="hint-text">嵌入模式下，將資料夾面板固定在左側欄 Gemini 標題正下方（新對話、近期對話在其下方捲動；側欄收合時一併隱藏）</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="folderPinToBottom"><span class="track"></span></label>
         </div>
         <div class="field toggle-field">
           <div>
